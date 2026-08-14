@@ -2,7 +2,7 @@
 
 链享浏览器是一款用于管理独立浏览器环境、代理出口、浏览器内核和自动化任务的本地桌面应用。
 
-当前版本：`1.4.5`
+当前版本：`1.4.6`
 主要技术：Go、Wails、React、TypeScript  
 当前已验证平台：Windows amd64
 
@@ -335,9 +335,9 @@ wails.json     Wails 应用与产品信息
 
 - 项目仓库：<https://github.com/TIANYA689/LianXiang-Browser>
 - Releases：<https://github.com/TIANYA689/LianXiang-Browser/releases>
-- 当前版本：<https://github.com/TIANYA689/LianXiang-Browser/releases/tag/v1.4.5>
+- 当前版本：<https://github.com/TIANYA689/LianXiang-Browser/releases/tag/v1.4.6>
 
-当前源码版本仍为 `v1.4.5`。本次窗口同步器优化不提升版本号，Windows amd64 本地程序、安装包和便携包需要使用最新源码重新构建。Linux 和 macOS 脚本已保留，但对应产物需要在各自平台完成构建验证后再上传。
+当前源码版本为 `v1.4.6`。本次发布包含窗口同步器优化与 Chrome 151 启动断点异常自动恢复，Windows amd64 本地程序、安装包和便携包统一使用 `1.4.6`。Linux 和 macOS 脚本已保留，但对应产物需要在各自平台完成构建验证后再上传。
 
 建议的首次上传流程：
 
@@ -356,11 +356,11 @@ git push -u origin main
 ```powershell
 git switch main
 git pull
-git tag -a v1.4.5 -m 'LianXiang Browser v1.4.5'
-git push origin v1.4.5
+git tag -a v1.4.6 -m 'LianXiang Browser v1.4.6'
+git push origin v1.4.6
 ```
 
-然后在你自己的 GitHub 仓库中进入 `Releases`，选择刚推送的 `v1.4.5` 标签创建发布，并上传构建产物。
+然后在你自己的 GitHub 仓库中进入 `Releases`，选择刚推送的 `v1.4.6` 标签创建发布，并上传构建产物。
 
 Windows 发布：
 
@@ -413,11 +413,7 @@ git push -u origin feature/profile-docs
 
 - [安全审计记录](SECURITY_AUDIT.md)
 - [更新记录](CHANGELOG.md)
-- [v1.4.5 发布说明](publish/RELEASE_NOTES-1.4.5.md)
-- [v1.4.4 发布说明](publish/RELEASE_NOTES-1.4.4.md)
-- [v1.4.2 发布说明](publish/RELEASE_NOTES-1.4.2.md)
-- [v1.4.1 发布说明](publish/RELEASE_NOTES-1.4.1.md)
-- [v1.4.0 发布说明](publish/RELEASE_NOTES-1.4.0.md)
+- [v1.4.6 发布说明](publish/RELEASE_NOTES-1.4.6.md)
 - [Windows 脚本说明](bat/README.md)
 - [Linux 发布说明](publish/linux/README.md)
 - [macOS 发布说明](publish/mac/README.md)

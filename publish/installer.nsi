@@ -1,10 +1,10 @@
 ﻿; 链享浏览器 NSIS Installer Script
-; Usage: makensis /DVERSION=1.4.5 /DSTAGINGDIR=C:\path\to\staging installer.nsi
+; Usage: makensis /DVERSION=1.4.6 /DSTAGINGDIR=C:\path\to\staging installer.nsi
 
 Unicode True
 
 !ifndef VERSION
-  !define VERSION "1.4.5"
+  !define VERSION "1.4.6"
 !endif
 !ifndef STAGINGDIR
   !define STAGINGDIR "..\publish\staging"

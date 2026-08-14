@@ -12,13 +12,13 @@ Usage:
 
 ```bat
 tools\public-release\publish-public.bat
-tools\public-release\publish-public.bat -Version 1.1.0
+tools\public-release\publish-public.bat -Version 1.4.6
 ```
 
 Custom commit message:
 
 ```bat
-tools\public-release\publish-public.bat -CommitMessage "release: public snapshot 1.2.3"
+tools\public-release\publish-public.bat -CommitMessage "release: public snapshot 1.4.6"
 ```
 
 Or load a multi-line message from a file:

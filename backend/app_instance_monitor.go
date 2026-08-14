@@ -1,14 +1,25 @@
 package backend
 
 import (
-	"lianxiang-browser/backend/internal/logger"
+	"errors"
 	"fmt"
+	"os/exec"
+	stdruntime "runtime"
+	"strings"
 	"time"
+
+	"lianxiang-browser/backend/internal/logger"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-func (a *App) waitBrowserProcess(profileId string, monitor *browserProcessMonitor) {
+const (
+	windowsStatusBreakpoint              = uint32(0x80000003)
+	browserEarlyBreakpointRecoveryWindow = 2 * time.Minute
+)
+
+func (a *App) waitBrowserProcess(input browserStartInput, monitor *browserProcessMonitor) {
+	profileId := input.ProfileID
 	err := monitor.Wait()
 
 	log := logger.New("Browser")
@@ -58,32 +69,100 @@ func (a *App) waitBrowserProcess(profileId string, monitor *browserProcessMonito
 		}
 	}
 
+	processRuntime := monitor.Runtime()
+	shouldRetryBreakpoint := shouldRetryEarlyBrowserBreakpoint(
+		err,
+		processRuntime,
+		!input.breakpointRetryDone,
+	)
+
 	a.browserMgr.Mutex.Lock()
 	profile, exists = a.browserMgr.Profiles[profileId]
 	wasRunning = exists && profile.Running
 	if exists {
 		profileName = profile.ProfileName
 		a.markProfileStoppedLocked(profileId, profile)
+		if wasRunning && err != nil && !shouldRetryBreakpoint {
+			profile.LastError = fmt.Sprintf("实例运行异常退出：%s", err.Error())
+		}
 	}
 	a.browserMgr.Mutex.Unlock()
 
-	if a.ctx == nil {
-		return
+	if wasRunning && err != nil && shouldRetryBreakpoint {
+		log.Warn("浏览器启动后触发断点异常，尝试自动恢复",
+			logger.F("profile_id", profileId),
+			logger.F("profile_name", profileName),
+			logger.F("runtime_ms", processRuntime.Milliseconds()),
+			logger.F("error", err.Error()),
+		)
+
+		retryInput := input
+		retryInput.breakpointRetryDone = true
+		if _, retryErr := a.browserInstanceStartWithInput(retryInput); retryErr == nil {
+			log.Info("浏览器断点异常自动恢复成功",
+				logger.F("profile_id", profileId),
+				logger.F("profile_name", profileName),
+			)
+			return
+		} else {
+			recoveryErr := fmt.Sprintf("%s；自动恢复失败：%s", err.Error(), retryErr.Error())
+			a.browserMgr.Mutex.Lock()
+			if current, ok := a.browserMgr.Profiles[profileId]; ok && current != nil {
+				current.LastError = fmt.Sprintf("实例运行异常退出：%s", recoveryErr)
+			}
+			a.browserMgr.Mutex.Unlock()
+
+			log.Error("浏览器断点异常自动恢复失败",
+				logger.F("profile_id", profileId),
+				logger.F("profile_name", profileName),
+				logger.F("error", recoveryErr),
+			)
+			if a.ctx != nil {
+				runtime.EventsEmit(a.ctx, "browser:instance:crashed", map[string]interface{}{
+					"profileId":   profileId,
+					"profileName": profileName,
+					"error":       recoveryErr,
+				})
+			}
+			return
+		}
 	}
 
 	if wasRunning && err != nil {
-		if exists && profile != nil {
-			profile.LastError = fmt.Sprintf("实例运行异常退出：%s", err.Error())
-		}
 		log.Error("浏览器进程异常退出", logger.F("profile_id", profileId), logger.F("profile_name", profileName), logger.F("error", err))
-		runtime.EventsEmit(a.ctx, "browser:instance:crashed", map[string]interface{}{
-			"profileId":   profileId,
-			"profileName": profileName,
-			"error":       err.Error(),
-		})
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, "browser:instance:crashed", map[string]interface{}{
+				"profileId":   profileId,
+				"profileName": profileName,
+				"error":       err.Error(),
+			})
+		}
 	} else {
-		runtime.EventsEmit(a.ctx, "browser:instance:stopped", profileId)
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, "browser:instance:stopped", profileId)
+		}
 	}
+}
+
+func shouldRetryEarlyBrowserBreakpoint(err error, processRuntime time.Duration, retryAvailable bool) bool {
+	return retryAvailable &&
+		stdruntime.GOOS == "windows" &&
+		processRuntime >= 0 &&
+		processRuntime <= browserEarlyBreakpointRecoveryWindow &&
+		isWindowsBreakpointExit(err)
+}
+
+func isWindowsBreakpointExit(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ProcessState != nil {
+		return uint32(exitErr.ExitCode()) == windowsStatusBreakpoint
+	}
+
+	return strings.Contains(strings.ToLower(err.Error()), "0x80000003")
 }
 
 func (a *App) waitDetachedBrowser(profileId string, debugPort int) {

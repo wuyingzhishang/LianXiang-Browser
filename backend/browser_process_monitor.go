@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -33,6 +34,7 @@ type browserProcessMonitor struct {
 	mu        sync.Mutex
 	result    browserProcessExitResult
 	debugPort int
+	startedAt time.Time
 }
 
 func newBrowserProcessMonitor(cmd *exec.Cmd) (*browserProcessMonitor, error) {
@@ -56,9 +58,22 @@ func newBrowserProcessMonitor(cmd *exec.Cmd) (*browserProcessMonitor, error) {
 }
 
 func (m *browserProcessMonitor) Start() {
+	m.mu.Lock()
+	m.startedAt = time.Now()
+	m.mu.Unlock()
 	go m.captureStderr()
 	<-m.stderrInit
 	go m.waitForExit()
+}
+
+func (m *browserProcessMonitor) Runtime() time.Duration {
+	m.mu.Lock()
+	startedAt := m.startedAt
+	m.mu.Unlock()
+	if startedAt.IsZero() {
+		return 0
+	}
+	return time.Since(startedAt)
 }
 
 func (m *browserProcessMonitor) Done() <-chan struct{} {

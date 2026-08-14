@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Optional package version override, for example 1.4.5
+        description: Optional package version override, for example 1.4.6
         required: false
         type: string
   push:

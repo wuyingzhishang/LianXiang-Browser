@@ -19,6 +19,7 @@ type browserStartInput struct {
 	ForceDirectProxy     bool
 	TemporaryProxyID     string
 	TemporaryProxyConfig string
+	breakpointRetryDone  bool
 }
 
 type browserStartPlan struct {

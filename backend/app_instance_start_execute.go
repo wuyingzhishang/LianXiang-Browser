@@ -1,11 +1,12 @@
 package backend
 
 import (
-	"lianxiang-browser/backend/internal/logger"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browserStartPlan) (*BrowserProfile, error) {
@@ -76,7 +77,7 @@ func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browser
 			)
 			a.emitBrowserInstanceStarted(profile, false)
 
-			go a.waitBrowserProcess(input.ProfileID, monitor)
+			go a.waitBrowserProcess(input, monitor)
 			return profile, nil
 		}
 
@@ -128,7 +129,7 @@ func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browser
 			logger.F("warning", runtimeWarning),
 		)
 		a.emitBrowserInstanceStarted(profile, false)
-		go a.waitBrowserProcess(input.ProfileID, monitor)
+		go a.waitBrowserProcess(input, monitor)
 		go a.waitBrowserDebugReadyAsync(input.ProfileID, plan.assignedDebugPort, browserAsyncDebugAttachTimeout)
 	}
 
