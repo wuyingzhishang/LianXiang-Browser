@@ -15,6 +15,7 @@ $script:ResolvedVersion = ""
 $script:LinuxArch = ""
 $script:WindowsInstallerDone = $false
 $script:WindowsPortableDone = $false
+$script:WindowsBinaryDone = $false
 $script:LinuxDone = $false
 
 function Write-Section {
@@ -209,7 +210,7 @@ function Resolve-WindowsFormat {
     }
 
     if ($PublishTarget -notin @("WINDOWS", "BOTH") -or -not $Interactive) {
-        return "INSTALLER"
+        return "BOTH"
     }
 
     $formatMapping = @{
@@ -303,6 +304,11 @@ function Build-WindowsBinary {
         "wails.json"
     )
 
+    # 不允许旧 EXE 在构建失败时被误当成新产物。
+    if (Test-Path -LiteralPath $binaryPath -PathType Leaf) {
+        Remove-Item -LiteralPath $binaryPath -Force
+    }
+
     $previousGoProxy = $env:GOPROXY
     try {
         $env:GOPROXY = "https://goproxy.cn,direct"
@@ -326,8 +332,49 @@ function Build-WindowsBinary {
     if (-not (Test-Path -LiteralPath $binaryPath -PathType Leaf)) {
         throw "构建产物不存在: build\bin\lianxiang-browser.exe"
     }
+    if (-not (Test-PeExecutable -FilePath $binaryPath)) {
+        throw "构建产物不是有效的 Windows PE 文件: build\bin\lianxiang-browser.exe"
+    }
+
+    # 让 build\bin 直接运行时也带有与发布包一致的 Windows 运行时和默认配置。
+    $localRuntimeDir = Join-Path $repoRoot "build/bin/bin"
+    if (Test-Path -LiteralPath $localRuntimeDir) {
+        Remove-Item -LiteralPath $localRuntimeDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $localRuntimeDir -Force | Out-Null
+    foreach ($runtimeName in @("xray.exe", "sing-box.exe", "README.md")) {
+        $runtimeSource = Join-Path $repoRoot "bin/$runtimeName"
+        if (Test-Path -LiteralPath $runtimeSource -PathType Leaf) {
+            Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $localRuntimeDir $runtimeName) -Force
+        }
+    }
+    Copy-Item -LiteralPath (Join-Path $repoRoot "publish/config.init.yaml") -Destination (Join-Path $repoRoot "build/bin/config.yaml") -Force
+    New-Item -ItemType Directory -Path (Join-Path $repoRoot "build/bin/data") -Force | Out-Null
+    $script:WindowsBinaryDone = $true
     Write-Host "✓ 构建成功: build\bin\lianxiang-browser.exe"
     Write-Host ""
+}
+
+function Clear-WindowsReleaseArtifacts {
+    $outputDir = Join-Path $repoRoot "publish/output"
+    New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+
+    $patterns = @(
+        "LianXiang-Browser-Setup-*.exe",
+        "LianXiang-Browser-*-windows-amd64-portable.zip",
+        "LianXiang-Browser-*-windows-amd64.exe",
+        "SHA256SUMS-*.txt"
+    )
+    $removed = 0
+    foreach ($pattern in $patterns) {
+        foreach ($item in (Get-ChildItem -LiteralPath $outputDir -Filter $pattern -File -Force -ErrorAction SilentlyContinue)) {
+            Remove-Item -LiteralPath $item.FullName -Force
+            $removed++
+        }
+    }
+    if ($removed -gt 0) {
+        Write-Host "[Windows] 已清理 $removed 个旧 Windows 发布文件"
+    }
 }
 
 function Assert-RuntimeHashes {
@@ -673,6 +720,9 @@ function Remove-WindowsStaging {
 function Write-WindowsChecksums {
     $outputDir = Join-Path $repoRoot "publish/output"
     $artifacts = New-Object System.Collections.Generic.List[string]
+    if ($script:WindowsBinaryDone) {
+        $artifacts.Add((Join-Path $repoRoot "build/bin/lianxiang-browser.exe"))
+    }
     if ($script:WindowsInstallerDone) {
         $artifacts.Add((Join-Path $outputDir "LianXiang-Browser-Setup-$script:ResolvedVersion.exe"))
     }
@@ -689,7 +739,8 @@ function Write-WindowsChecksums {
             throw "生成校验文件失败，产物不存在: $artifact"
         }
         $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact).Hash.ToUpperInvariant()
-        $lines.Add("$hash  $([System.IO.Path]::GetFileName($artifact))")
+        $relativeName = $artifact.Substring($repoRoot.Length).TrimStart([char]92, [char]47) -replace '\\', '/'
+        $lines.Add("$hash  $relativeName")
     }
 
     $checksumName = "SHA256SUMS-$script:ResolvedVersion.txt"
@@ -708,6 +759,8 @@ function Publish-Windows {
     Write-Host "[3/3] 开始 Windows 打包..."
     Write-Host "  输出格式: $Format"
     Write-Host ""
+
+    Clear-WindowsReleaseArtifacts
 
     $makensisPath = $null
     if ($Format -in @("INSTALLER", "BOTH")) {
@@ -798,13 +851,16 @@ try {
     Write-Host ""
     Write-Section "✓ 发布完成！"
     Write-Host ""
+    if ($script:WindowsBinaryDone) {
+        Write-Host "Windows 本地 EXE: build\bin\lianxiang-browser.exe"
+    }
     if ($script:WindowsInstallerDone) {
         Write-Host "Windows 安装包: publish\output\LianXiang-Browser-Setup-$script:ResolvedVersion.exe"
     }
     if ($script:WindowsPortableDone) {
         Write-Host "Windows 便携包: publish\output\LianXiang-Browser-$script:ResolvedVersion-windows-amd64-portable.zip"
     }
-    if ($script:WindowsInstallerDone -or $script:WindowsPortableDone) {
+    if ($script:WindowsBinaryDone -or $script:WindowsInstallerDone -or $script:WindowsPortableDone) {
         Write-Host "SHA-256 校验: publish\output\SHA256SUMS-$script:ResolvedVersion.txt"
     }
     if ($script:LinuxDone) {
@@ -814,7 +870,7 @@ try {
         }
     }
     Write-Host ""
-    Write-Host "提示：用户安装后可将旧的 data\ 目录粘贴到安装目录覆盖初始数据"
+    Write-Host "提示：Windows 安装版会将可写状态保存到 %LOCALAPPDATA%\链享浏览器；若旧 data\ 目录被放入安装目录，首次启动会自动迁移缺少的文件"
     exit 0
 }
 catch {

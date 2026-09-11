@@ -170,7 +170,7 @@ Function WarnInstallDir
   Return
 
 warn_dir:
-  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL|MB_DEFBUTTON2 "不建议安装到 C 盘、Program Files 或其他受权限保护的目录。$\r$\n$\r$\n链享浏览器 会在安装目录写入 data、浏览器实例和运行时文件；普通权限运行时可能写入失败，导致再次启动闪退或浏览器实例启动失败。$\r$\n$\r$\n建议改为非 C 盘可写目录，例如 D:\software\链享浏览器 或 E:\software\链享浏览器。$\r$\n$\r$\n点击“确定”继续安装到当前目录，点击“取消”返回修改安装路径。" IDOK continue_install IDCANCEL cancel_install
+  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL|MB_DEFBUTTON2 "当前目录受 Windows 权限保护。链享浏览器会自动将配置、数据库、浏览器实例和运行时文件保存到当前用户的 %LOCALAPPDATA%\链享浏览器，不需要向安装目录写入用户数据；安装目录中的 bin\ 仅用于保存程序运行文件。$\r$\n$\r$\n如果你已经把旧 data\ 目录复制到安装目录，首次启动时会自动迁移缺少的文件到用户数据目录。$\r$\n$\r$\n点击“确定”继续安装到当前目录，点击“取消”返回修改安装路径。" IDOK continue_install IDCANCEL cancel_install
 
 continue_install:
   Return
@@ -194,8 +194,8 @@ RequestExecutionLevel admin
 !define MUI_UNICON "..\build\windows\icon.ico"
 
 !insertmacro MUI_PAGE_WELCOME
-!define MUI_DIRECTORYPAGE_TEXT_TOP "请选择 链享浏览器 的安装目录。建议安装到非 C 盘的可写目录，例如 D:\software\链享浏览器 或 E:\software\链享浏览器；不要安装到 C 盘、Program Files 或其他受权限保护的目录。"
-!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "安装目录（建议非 C 盘）"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "请选择 链享浏览器 的程序安装目录。即使安装到 Program Files，应用也会把用户数据保存到当前用户的 %LOCALAPPDATA%\链享浏览器。"
+!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "程序安装目录"
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE WarnInstallDir
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_COMPONENTSPAGE_SMALLDESC

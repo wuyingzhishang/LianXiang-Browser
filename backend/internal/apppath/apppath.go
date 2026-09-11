@@ -1,8 +1,8 @@
 package apppath
 
 import (
-	"lianxiang-browser/backend/internal/fsutil"
 	"io"
+	"lianxiang-browser/backend/internal/fsutil"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -36,7 +36,7 @@ func IsDetached(appRoot string) bool {
 }
 
 // Resolve 将相对路径解析到安装目录或用户状态目录。
-// 已安装的 Linux / macOS 应用在启用 detached 模式后，除 bin/ 外的相对路径都会落到用户可写目录。
+// 已安装的 Windows / Linux / macOS 应用在启用 detached 模式后，除 bin/ 外的相对路径都会落到用户可写目录。
 func Resolve(appRoot, p string) string {
 	return resolveForOS(appRoot, p, goruntime.GOOS)
 }
@@ -95,6 +95,20 @@ func ensureWritableLayoutForOS(appRoot, goos string) error {
 	); err != nil {
 		return err
 	}
+	// 安装包不会携带用户数据，但升级或用户手动把旧 data 目录放回安装目录时，
+	// 需要把已有内容迁移到可写状态目录。只在状态目录还没有数据库时执行，避免每次启动
+	// 都扫描可能很大的旧 data 目录，也不会覆盖已经存在的新状态。
+	stateDB := filepath.Join(root.stateRoot, "data", "app.db")
+	if _, err := os.Stat(stateDB); os.IsNotExist(err) {
+		if err := copyDirContentsIfMissing(
+			filepath.Join(root.installRoot, "data"),
+			filepath.Join(root.stateRoot, "data"),
+		); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -133,6 +147,8 @@ func normalizeGOOS(goos string) string {
 
 func shouldDetachStateRoot(goos, installRoot string) bool {
 	switch normalizeGOOS(goos) {
+	case "windows":
+		return !dirWritable(installRoot)
 	case "linux":
 		return !dirWritable(installRoot)
 	case "darwin":
@@ -160,6 +176,13 @@ func normalizeRoot(appRoot string) string {
 
 func userStateRootForOS(goos, fallback string) string {
 	switch normalizeGOOS(goos) {
+	case "windows":
+		if base := strings.TrimSpace(os.Getenv("LOCALAPPDATA")); base != "" {
+			return filepath.Join(base, "链享浏览器")
+		}
+		if base := strings.TrimSpace(os.Getenv("APPDATA")); base != "" {
+			return filepath.Join(base, "链享浏览器")
+		}
 	case "linux":
 		if base := strings.TrimSpace(os.Getenv("XDG_DATA_HOME")); base != "" {
 			return filepath.Join(base, appStateDirName)
@@ -267,6 +290,44 @@ func copyDirIfMissing(src, dst string) error {
 		if info.IsDir() {
 			dirMode := info.Mode().Perm() | 0700
 			return os.MkdirAll(target, dirMode)
+		}
+		return copyFile(path, target, info.Mode().Perm())
+	})
+}
+
+// copyDirContentsIfMissing 将源目录内容合并到目标目录，仅补齐缺少的文件。
+// 目标目录可能已由启动布局初始化创建，因此不能复用 copyDirIfMissing 的“目标存在即跳过”语义。
+func copyDirContentsIfMissing(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if !info.IsDir() {
+		return nil
+	}
+
+	return filepath.Walk(src, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return os.MkdirAll(dst, 0755)
+		}
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, info.Mode().Perm()|0700)
+		}
+		if _, err := os.Stat(target); err == nil {
+			return nil
+		} else if !os.IsNotExist(err) {
+			return err
 		}
 		return copyFile(path, target, info.Mode().Perm())
 	})

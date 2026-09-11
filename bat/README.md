@@ -112,6 +112,7 @@ bat\publish.bat B -Version 1.4.6 -WindowsFormat BOTH
 说明：
 
 - `zip` / `portable` 仅生成 Windows 便携 ZIP，`both` 同时生成 Windows 安装包和便携 ZIP。
+- 指定 Windows 目标但不传 `-WindowsFormat` 时默认生成安装包和便携 ZIP；两者都会先重新构建本地 EXE。
 - `-Version 1.4.6` 会覆盖本次发布使用的版本号；未传时读取 `wails.json`。
 - `-WindowsFormat` 支持 `INSTALLER`、`PORTABLE`、`BOTH`。
 - Windows / Linux 包名、NSIS 安装包版本号，以及本次构建期间读取到的 `wails.json productVersion` 会统一使用该值。
@@ -146,7 +147,7 @@ Windows 分支使用的项目路径：
 - bin\sing-box.exe
 
 临时目录：
-- publish\staging\
+- publish\staging\（仅在打包期间存在，完成后自动删除）
 
 输出：
 - publish\output\LianXiang-Browser-Setup-<version>.exe
@@ -157,6 +158,8 @@ Windows 分支使用的项目路径：
 说明：
 
 - Windows 安装包包含应用本体、默认配置和代理运行时。
+- SHA-256 清单同时覆盖 `build\bin\lianxiang-browser.exe`、安装包和便携 ZIP；清单路径相对于仓库根目录。
+- 每次 Windows 发布会先删除旧版本 Windows 安装包、便携 ZIP 和 SHA-256 文件，避免把过期产物误上传。
 - 如果 `chrome\` 根目录或其一级子目录中检测到有效的 Windows `chrome.exe`，会自动一起打进 EXE 安装包。
 - 如果未检测到 Windows 内核，安装包仍会保留 `chrome\README.md` 说明文件。
 

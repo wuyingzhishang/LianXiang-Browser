@@ -26,12 +26,9 @@ publish/output/SHA256SUMS-1.4.6.txt
 
 SHA-256：
 
-```text
-13FBCAE9FDD409819A7BD338D6C388282B849D86A8413350A2AB4642B94AD43A  LianXiang-Browser-Setup-1.4.6.exe
-43412C3FDDCD46622EC0BD01E9312C67B8EB8160E8740AD0AB00C303A7CE2EBE  LianXiang-Browser-1.4.6-windows-amd64-portable.zip
-```
+请以 `publish/output/SHA256SUMS-1.4.6.txt` 为准。该文件同时包含本地 EXE、安装包和便携 ZIP 的 SHA-256，清单路径相对于仓库根目录。
 
-同样的校验值已写入 `publish/output/SHA256SUMS-1.4.6.txt`。
+发布脚本会在每次构建前删除旧版本 Windows 输出，完成后删除 `publish/staging/` 临时目录。
 
 - 安装版包含应用本体、默认配置、Xray 和 sing-box；若发布目录存在有效 Windows Chromium 内核，也会一并打包。
 - 便携版解压后可直接运行目录中的 `lianxiang-browser.exe`。

@@ -365,19 +365,21 @@ git push origin v1.4.6
 Windows 发布：
 
 ```powershell
-.\bat\publish.bat zip
-.\bat\publish.bat both
+.\bat\publish.bat W -Version 1.4.6
 ```
 
 产物名称：
 
 ```text
+build\bin\lianxiang-browser.exe
 publish\output\LianXiang-Browser-Setup-<version>.exe
 publish\output\LianXiang-Browser-<version>-windows-amd64-portable.zip
 publish\output\SHA256SUMS-<version>.txt
 ```
 
-其中 `zip` 只生成便携包，`both` 同时生成安装包和便携包；两种模式都会为本次 Windows 产物生成 SHA-256 校验文件。安装包需要 NSIS；便携包不依赖 NSIS。Linux 和 macOS 发布脚本会生成对应架构的 `.deb`、`.tar.gz`、`.app` 或 `.zip`，但当前二开版本尚未完成全平台重新验证。
+默认 Windows 发布会重新构建本地 EXE，并同时生成安装包、便携包和 SHA-256 清单；清单同时覆盖三项 Windows 产物。`zip` / `portable` 仍可只生成便携包，`both` 可显式生成两种包。安装包需要 NSIS；便携包不依赖 NSIS。发布完成后 `publish\staging\` 会被删除，旧的 Windows 输出会在构建前清理。Linux 和 macOS 发布脚本会生成对应架构的 `.deb`、`.tar.gz`、`.app` 或 `.zip`，但当前二开版本尚未完成全平台重新验证。
+
+Windows 发布流程和清理边界详见 [publish/README.md](publish/README.md)。
 
 发布前检查：
 
