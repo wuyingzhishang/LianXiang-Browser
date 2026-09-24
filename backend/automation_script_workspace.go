@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 func (a *App) preparePlaywrightScriptWorkspace(runtimeDir string, script automation.ScriptRecord) (string, string, func(), error) {

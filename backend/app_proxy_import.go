@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/proxy"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/proxy"
 	"context"
 	"encoding/base64"
 	"errors"

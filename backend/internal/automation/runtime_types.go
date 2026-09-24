@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"ant-chrome/backend/internal/apppath"
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/config"
 )
 
 const ProgressEventName = "automation:runtime:progress"

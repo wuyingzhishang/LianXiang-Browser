@@ -1,6 +1,6 @@
 package backup
 
-import "ant-chrome/backend/internal/config"
+import "lianxiang-browser/backend/internal/config"
 
 const (
 	// PackageFormat 标识导出包格式类型。

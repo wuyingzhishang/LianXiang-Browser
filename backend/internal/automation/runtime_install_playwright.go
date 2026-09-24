@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func (m *Manager) installPlaywrightRuntime(ctx context.Context, tempRoot string, stagingDir string, version string) error {

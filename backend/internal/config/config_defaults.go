@@ -269,7 +269,7 @@ func DefaultConfig() *Config {
 			},
 		},
 		App: AppConfig{
-			Name: "Ant Browser",
+			Name: "链享浏览器",
 			Window: WindowConfig{
 				Width:     1750,
 				Height:    1000,
@@ -344,7 +344,7 @@ func DefaultConfig() *Config {
 		Backup: BackupConfig{
 			Channels: BackupChannelsConfig{
 				OpenList: OpenListChannelConfig{
-					RemotePath: "ant-chrome/backups",
+					RemotePath: "lianxiang-browser/backups",
 				},
 				S3: S3ChannelConfig{
 					Region: "us-east-1",

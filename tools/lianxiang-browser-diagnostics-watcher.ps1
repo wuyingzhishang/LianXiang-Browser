@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$InstallDir = 'E:\software\Ant Browser',
+    [string]$InstallDir = 'E:\software\链享浏览器',
     [int]$PollMilliseconds = 2000,
     [int]$FileSampleSeconds = 30,
     [int]$EventWindowMinutes = 5,
@@ -58,7 +58,7 @@ function Get-WatcherMutexName {
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($Path.ToLowerInvariant())
         $hash = $sha256.ComputeHash($bytes)
         $suffix = ([System.BitConverter]::ToString($hash)).Replace('-', '').Substring(0, 16)
-        return 'Local\AntBrowserDiagnosticsWatcher-' + $suffix
+        return 'Local\LianXiangBrowserDiagnosticsWatcher-' + $suffix
     } finally {
         $sha256.Dispose()
     }
@@ -154,7 +154,7 @@ function Get-FileSnapshots {
 }
 
 function Get-TargetProcessSnapshot {
-    $processes = @(Get-Process -Name 'ant-chrome' -ErrorAction SilentlyContinue)
+    $processes = @(Get-Process -Name 'lianxiang-browser' -ErrorAction SilentlyContinue)
     foreach ($process in $processes) {
         $path = $null
         try {
@@ -177,7 +177,7 @@ function Get-TargetProcessSnapshot {
         return [pscustomobject]@{
             ProcessId = [int]$process.Id
             ParentProcessId = $null
-            Name = 'ant-chrome.exe'
+            Name = 'lianxiang-browser.exe'
             ExecutablePath = $path
             CreationDate = $process.StartTime
         }
@@ -414,7 +414,7 @@ function Get-RelatedEvents {
             if ($logName -eq 'Application') {
                 $include = ($event.ProviderName -match 'Application Error|Windows Error Reporting|\.NET Runtime|Application Hang|SideBySide') -or ($event.Id -in @(1000, 1001, 1002, 1026))
             } elseif ($logName -match 'TaskScheduler') {
-                $include = $message -match 'Ant Browser|ant-chrome|Diagnostics Watcher|AntLaunch'
+                $include = $message -match '链享浏览器|lianxiang-browser|Diagnostics Watcher|AntLaunch'
             } else {
                 $include = $true
             }
@@ -553,7 +553,7 @@ if ($TailLines -lt 20) {
 }
 
 $InstallDir = Get-NormalizedPath $InstallDir
-$appPath = Join-Path $InstallDir 'ant-chrome.exe'
+$appPath = Join-Path $InstallDir 'lianxiang-browser.exe'
 $uninstallerPath = Join-Path $InstallDir 'Uninstall.exe'
 $dataDir = Join-Path $InstallDir 'data'
 $diagnosticRoot = Join-Path $dataDir 'diagnostics'

@@ -58,7 +58,10 @@ publish/staging/
 publish/output/
 
 # Internal docs / scratch files
-docs/
+docs/*
+!docs/release-windows.md
+!docs/github-release-template.md
+!docs/build-and-release-checklist.md
 DEPLOYMENT_GUIDE.md
 plan.md
 pic/
@@ -142,3 +145,16 @@ accounts.yml
 *.backup
 *.old
 *.orig
+
+# Local release output (publish scripts generate and replace these files)
+publish/output/*
+!publish/output/.gitkeep
+publish/staging/
+.local-tools/
+
+# Locally built Windows launcher used to repair relocated Program Files installs.
+# Keep the source and scripts under tools/lianxiang-launcher tracked; generated
+# binaries and ad-hoc launcher outputs must not be uploaded.
+build/windows/lianxiang-launcher.exe
+lianxiang-launcher.exe
+lianxiang-browser-fixed.exe

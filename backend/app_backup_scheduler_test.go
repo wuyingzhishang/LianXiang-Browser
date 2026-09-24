@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -30,7 +30,7 @@ func TestBackupScheduledSaveSettingsStoresTokenLocally(t *testing.T) {
 
 	result, err := scheduler.saveOpenList(map[string]string{
 		"baseURL":    "http://127.0.0.1:5244/dav",
-		"remotePath": "ant-chrome/backups",
+		"remotePath": "lianxiang-browser/backups",
 		"token":      "secret-token",
 	})
 	if err != nil {
@@ -193,7 +193,7 @@ func TestBackupLocalDirectoryStaysInSyncWithSchedulerSettings(t *testing.T) {
 
 func TestOpenListRemotePathCanBeClearedToUseRoot(t *testing.T) {
 	next := config.DefaultConfig().Backup
-	next.Channels.OpenList.RemotePath = "ant-chrome/backups"
+	next.Channels.OpenList.RemotePath = "lianxiang-browser/backups"
 
 	if err := applyOpenListInput(&next, map[string]string{"remotePath": ""}); err != nil {
 		t.Fatalf("apply OpenList input: %v", err)

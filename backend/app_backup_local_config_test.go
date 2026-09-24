@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +62,7 @@ func TestBackupLocalConfigStoresFullS3Config(t *testing.T) {
 	base.Channels.S3.Endpoint = "https://s3.example.com"
 	base.Channels.S3.Region = "us-west-2"
 	base.Channels.S3.Bucket = "backup-bucket"
-	base.Channels.S3.Prefix = "ant-chrome/backups"
+	base.Channels.S3.Prefix = "lianxiang-browser/backups"
 	base.Channels.S3.AccessKeyID = "access-key"
 	base.Channels.S3.SecretAccessKey = "secret-key"
 	base.Channels.S3.SessionToken = "session-token"
@@ -76,7 +76,7 @@ func TestBackupLocalConfigStoresFullS3Config(t *testing.T) {
 		t.Fatalf("read S3 local config: %v", err)
 	}
 	text := string(data)
-	for _, publicValue := range []string{"s3.example.com", "us-west-2", "backup-bucket", "ant-chrome/backups", "force_path_style: true"} {
+	for _, publicValue := range []string{"s3.example.com", "us-west-2", "backup-bucket", "lianxiang-browser/backups", "force_path_style: true"} {
 		if !strings.Contains(text, publicValue) {
 			t.Fatalf("local S3 config must contain %q: %s", publicValue, text)
 		}
@@ -94,7 +94,7 @@ func TestBackupLocalConfigStoresFullS3Config(t *testing.T) {
 	if !exists {
 		t.Fatal("S3 local config should be detected")
 	}
-	if loaded.Channels.S3.Endpoint != "https://s3.example.com" || loaded.Channels.S3.Region != "us-west-2" || loaded.Channels.S3.Bucket != "backup-bucket" || loaded.Channels.S3.Prefix != "ant-chrome/backups" ||
+	if loaded.Channels.S3.Endpoint != "https://s3.example.com" || loaded.Channels.S3.Region != "us-west-2" || loaded.Channels.S3.Bucket != "backup-bucket" || loaded.Channels.S3.Prefix != "lianxiang-browser/backups" ||
 		loaded.Channels.S3.AccessKeyID != "access-key" || loaded.Channels.S3.SecretAccessKey != "secret-key" || loaded.Channels.S3.SessionToken != "session-token" || !loaded.Channels.S3.ForcePathStyle {
 		t.Fatalf("loaded S3 credentials = %+v", loaded.Channels.S3)
 	}

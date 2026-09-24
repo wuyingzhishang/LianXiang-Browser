@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/backup/channels/openlist"
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/backup/channels/openlist"
+	"lianxiang-browser/backend/internal/config"
 	"fmt"
 	"strconv"
 	"strings"

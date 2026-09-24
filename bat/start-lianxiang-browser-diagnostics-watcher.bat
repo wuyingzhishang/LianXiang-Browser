@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "WATCHER=%~dp0..\tools\ant-chrome-diagnostics-watcher.ps1"
+set "WATCHER=%~dp0..\tools\lianxiang-browser-diagnostics-watcher.ps1"
 set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
 if not exist "%WATCHER%" (
@@ -18,9 +18,9 @@ if not exist "%POWERSHELL_EXE%" (
     exit /b 1
 )
 
-echo Ant Browser diagnostics watcher is running in this window.
+echo 链享浏览器 diagnostics watcher is running in this window.
 echo Close this window to stop the watcher.
-echo Log: E:\software\Ant Browser\data\diagnostics\watcher.log
+echo Log: E:\software\链享浏览器\data\diagnostics\watcher.log
 echo.
 "%POWERSHELL_EXE%" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%WATCHER%"
 if errorlevel 1 (

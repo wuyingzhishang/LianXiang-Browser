@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"testing"
 
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/launchcode"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/launchcode"
 )
 
 func TestRestartLaunchServerRestoresPreviousServerWhenNewPortFails(t *testing.T) {

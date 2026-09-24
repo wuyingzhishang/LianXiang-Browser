@@ -2,6 +2,8 @@ package backend
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -35,6 +37,59 @@ func TestTerminateBrowserUserDataOrphansKillsPortlessMain(t *testing.T) {
 	}
 	if len(terminatedPIDs) != 1 || terminatedPIDs[0] != 101 {
 		t.Fatalf("terminated PIDs = %v, want [101]", terminatedPIDs)
+	}
+}
+
+func TestClearStaleBrowserSingletonFilesRemovesMarkersWhenProfileIsUnused(t *testing.T) {
+	oldFind := findBrowserUserDataProcesses
+	findBrowserUserDataProcesses = func(string) ([]browserUserDataProcess, error) {
+		return nil, nil
+	}
+	t.Cleanup(func() { findBrowserUserDataProcesses = oldFind })
+
+	userDataDir := t.TempDir()
+	for _, name := range []string{"SingletonLock", "SingletonCookie", "SingletonSocket"} {
+		if err := os.WriteFile(filepath.Join(userDataDir, name), []byte("stale"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	removed, err := clearStaleBrowserSingletonFiles(userDataDir)
+	if err != nil {
+		t.Fatalf("clearStaleBrowserSingletonFiles returned error: %v", err)
+	}
+	if !removed {
+		t.Fatal("removed = false, want true")
+	}
+	for _, name := range []string{"SingletonLock", "SingletonCookie", "SingletonSocket"} {
+		if _, err := os.Stat(filepath.Join(userDataDir, name)); !os.IsNotExist(err) {
+			t.Fatalf("marker %s still exists, stat err=%v", name, err)
+		}
+	}
+}
+
+func TestClearStaleBrowserSingletonFilesKeepsMarkersWhenProfileIsRunning(t *testing.T) {
+	oldFind := findBrowserUserDataProcesses
+	findBrowserUserDataProcesses = func(string) ([]browserUserDataProcess, error) {
+		return []browserUserDataProcess{{PID: 101, CommandLine: `"C:\\chrome.exe" --user-data-dir="C:\\data"`}}, nil
+	}
+	t.Cleanup(func() { findBrowserUserDataProcesses = oldFind })
+
+	userDataDir := t.TempDir()
+	marker := filepath.Join(userDataDir, "SingletonLock")
+	if err := os.WriteFile(marker, []byte("active"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	removed, err := clearStaleBrowserSingletonFiles(userDataDir)
+	if err != nil {
+		t.Fatalf("clearStaleBrowserSingletonFiles returned error: %v", err)
+	}
+	if removed {
+		t.Fatal("removed = true, want false for running profile")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("active marker was removed: %v", err)
 	}
 }
 

@@ -11,7 +11,7 @@ func TestBackupConfigSaveKeepsChannelSettingsPrivateToken(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 	cfg := DefaultConfig()
 	cfg.Backup.Channels.OpenList.BaseURL = "http://127.0.0.1:5244/dav"
-	cfg.Backup.Channels.OpenList.RemotePath = "ant-chrome/backups"
+	cfg.Backup.Channels.OpenList.RemotePath = "lianxiang-browser/backups"
 	cfg.Backup.Channels.OpenList.Token = "secret-token"
 
 	if err := cfg.Save(configPath); err != nil {
@@ -58,7 +58,7 @@ func TestBackupConfigLoadsLegacyOpenListSection(t *testing.T) {
 		t.Fatalf("load legacy config: %v", err)
 	}
 	openList := loaded.Backup.Channels.OpenList
-	if openList.BaseURL != "http://127.0.0.1:5244/dav" || openList.RemotePath != "ant-chrome/backups" || openList.Token != "legacy-token" {
+	if openList.BaseURL != "http://127.0.0.1:5244/dav" || openList.RemotePath != "lianxiang-browser/backups" || openList.Token != "legacy-token" {
 		t.Fatalf("legacy OpenList config = %+v", openList)
 	}
 	if !loaded.Backup.Schedule.Enabled || loaded.Backup.Schedule.DailyTime != "03:15" {
@@ -141,7 +141,7 @@ func TestBackupConfigUnmarshalPreservesMultipleChannels(t *testing.T) {
 		t.Fatalf("OpenList settings = %+v, want preserved", loaded.Backup.Channels.OpenList)
 	}
 	s3 := loaded.Backup.Channels.S3
-	if s3.Endpoint != "https://s3.example.com" || s3.Region != "us-west-2" || s3.Bucket != "backup-bucket" || s3.Prefix != "ant-chrome/backups" {
+	if s3.Endpoint != "https://s3.example.com" || s3.Region != "us-west-2" || s3.Bucket != "backup-bucket" || s3.Prefix != "lianxiang-browser/backups" {
 		t.Fatalf("S3 settings = %+v, want preserved", s3)
 	}
 }

@@ -1,9 +1,9 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
 	"strings"
 )
 
@@ -63,7 +63,7 @@ func (a *App) BookmarkSave(items []BrowserBookmark) error {
 		name := strings.TrimSpace(item.Name)
 		url := strings.TrimSpace(item.URL)
 		if name != "" && url != "" {
-			valid = append(valid, BrowserBookmark{Name: name, URL: url, OpenOnStart: item.OpenOnStart})
+			valid = append(valid, BrowserBookmark{Name: name, URL: url, OpenOnStart: item.OpenOnStart, Folder: item.Folder, Disabled: item.Disabled, DisabledProfileIDs: item.DisabledProfileIDs})
 		}
 	}
 	valid = normalizeBookmarkList(valid)
@@ -106,7 +106,7 @@ func mergeBookmarksByURL(items []BrowserBookmark, required []BrowserBookmark) []
 			return
 		}
 		seen[key] = struct{}{}
-		merged = append(merged, BrowserBookmark{Name: name, URL: url, OpenOnStart: item.OpenOnStart})
+		merged = append(merged, BrowserBookmark{Name: name, URL: url, OpenOnStart: item.OpenOnStart, Folder: item.Folder, Disabled: item.Disabled, DisabledProfileIDs: item.DisabledProfileIDs})
 	}
 	for _, item := range items {
 		appendOne(item)

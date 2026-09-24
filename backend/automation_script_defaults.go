@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 func (a *App) ensureAutomationScriptDefaults(store *automation.ScriptStore) error {

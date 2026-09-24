@@ -120,7 +120,7 @@ export function createWebImageGenerateDownloadScriptDraft(): AutomationScriptRec
     selectorText: "",
     paramsText: `{
   "pageUrl": "https://chatgpt.com/",
-  "prompt": "A cinematic chrome ant browser mascot, premium product lighting",
+  "prompt": "A cinematic LianXiang browser mascot, premium product lighting",
   "outputFileName": "generated-image.png",
   "timeoutMs": 300000,
   "waitAfterLoadMs": 1200,
@@ -159,7 +159,7 @@ export function createWebImageGenerateDownloadScriptDraft(): AutomationScriptRec
         {
           name: "prompt",
           defaultValue:
-            "A cinematic chrome ant browser mascot, premium product lighting",
+            "A cinematic LianXiang browser mascot, premium product lighting",
           description: "发送到 ChatGPT 的图片生成提示词。",
           required: true,
         },

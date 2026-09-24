@@ -8,8 +8,8 @@ import (
 	goruntime "runtime"
 	"strings"
 
-	"ant-chrome/backend/internal/apppath"
-	"ant-chrome/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/fsutil"
 )
 
 func (a *App) proxyCoreStatus(spec proxyCoreSpec, target proxyCoreTarget) ProxyCoreStatusResult {

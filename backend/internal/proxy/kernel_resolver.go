@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 const (

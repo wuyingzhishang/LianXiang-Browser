@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func (s *LaunchServer) appendLaunchLog(method, path, clientIP, code string, selector LaunchSelector, params LaunchRequestParams, ok bool, status int, errMsg, profileID, profileName string, startAt time.Time) {

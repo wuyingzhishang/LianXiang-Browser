@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )

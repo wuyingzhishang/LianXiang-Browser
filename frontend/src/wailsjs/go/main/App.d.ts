@@ -310,6 +310,14 @@ export function ClearAppLogs():Promise<void>;
 
 export function CreateGroup(arg1:browser.GroupInput):Promise<browser.Group>;
 
+export function DataDirectoryGetInfo():Promise<backend.DataDirectoryInfo>;
+
+export function DataDirectoryMigrate(arg1:backend.DataDirectoryMigrateOptions):Promise<backend.DataDirectoryMigrateResult>;
+
+export function DataDirectorySelectDirectory():Promise<backend.DataDirectorySelectResult>;
+
+export function DataDirectorySetCustom(arg1:string,arg2:boolean):Promise<backend.DataDirectoryInfo>;
+
 export function DeleteGroup(arg1:string):Promise<void>;
 
 export function FetchRemoteAuthorProfile(arg1:string,arg2:number):Promise<Record<string, any>>;

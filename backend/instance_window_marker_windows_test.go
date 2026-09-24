@@ -230,21 +230,18 @@ func TestProfileWindowMarkerFallbackIconUsesEmbeddedLogo(t *testing.T) {
 		t.Fatal(`fallback instance icon should keep a transparent background`)
 	}
 
-	whitePixels := 0
-	bluePixels := 0
+	cyanPixels := 0
+	greenPixels := 0
 	for _, pixel := range pixels {
-		if isProfileWindowMarkerWhiteLogoPixel(pixel) {
-			whitePixels++
+		if isProfileWindowMarkerCyanLogoPixel(pixel) {
+			cyanPixels++
 		}
-		if isProfileWindowMarkerBlueLineLogoPixel(pixel) {
-			bluePixels++
+		if isProfileWindowMarkerGreenLogoPixel(pixel) {
+			greenPixels++
 		}
 	}
-	if whitePixels == 0 {
-		t.Fatal(`fallback instance icon lost the embedded logo white base`)
-	}
-	if bluePixels == 0 {
-		t.Fatal(`fallback instance icon lost the embedded logo blue lines`)
+	if cyanPixels == 0 || greenPixels == 0 {
+		t.Fatalf(`fallback instance icon lost the embedded linked-L logo colors: cyan=%d green=%d`, cyanPixels, greenPixels)
 	}
 	badgePixels := 0
 	for pixelY := 0; pixelY <= 14; pixelY++ {
@@ -259,7 +256,7 @@ func TestProfileWindowMarkerFallbackIconUsesEmbeddedLogo(t *testing.T) {
 	}
 }
 
-func TestProfileWindowMarkerEmbeddedLogoKeepsWhiteBaseAndBlueLines(t *testing.T) {
+func TestProfileWindowMarkerEmbeddedLogoKeepsLinkedLColors(t *testing.T) {
 	pixels := make([]uint32, profileWindowMarkerFallbackIconWidth*profileWindowMarkerFallbackIconHeight)
 	if !drawProfileWindowMarkerEmbeddedLogoIcon(pixels, profileWindowMarkerFallbackIconWidth, profileWindowMarkerFallbackIconHeight) {
 		t.Fatal(`embedded logo could not be drawn`)
@@ -268,21 +265,18 @@ func TestProfileWindowMarkerEmbeddedLogoKeepsWhiteBaseAndBlueLines(t *testing.T)
 		t.Fatal(`embedded logo should keep a transparent canvas outside the fingerprint`)
 	}
 
-	whitePixels := 0
-	bluePixels := 0
+	cyanPixels := 0
+	greenPixels := 0
 	for _, pixel := range pixels {
-		if isProfileWindowMarkerWhiteLogoPixel(pixel) {
-			whitePixels++
+		if isProfileWindowMarkerCyanLogoPixel(pixel) {
+			cyanPixels++
 		}
-		if isProfileWindowMarkerBlueLineLogoPixel(pixel) {
-			bluePixels++
+		if isProfileWindowMarkerGreenLogoPixel(pixel) {
+			greenPixels++
 		}
 	}
-	if whitePixels == 0 {
-		t.Fatal(`embedded logo lost its white base before badge decoration`)
-	}
-	if bluePixels == 0 {
-		t.Fatal(`embedded logo lost its blue ant lines before badge decoration`)
+	if cyanPixels == 0 || greenPixels == 0 {
+		t.Fatalf(`embedded logo lost its linked-L colors before badge decoration: cyan=%d green=%d`, cyanPixels, greenPixels)
 	}
 }
 
@@ -315,29 +309,24 @@ func TestProfileWindowMarkerSmallInstanceIconKeepsLogoAndBadge(t *testing.T) {
 	drawProfileWindowMarkerInstanceIcon(pixels, profileWindowMarkerOverlayIconWidth, profileWindowMarkerOverlayIconHeight, `A`)
 
 	badgePixels := 0
-	bluePixels := 0
+	logoPixels := 0
 	for pixelY := 0; pixelY < profileWindowMarkerOverlayIconHeight; pixelY++ {
 		for pixelX := 0; pixelX < profileWindowMarkerOverlayIconWidth; pixelX++ {
 			pixel := pixels[pixelY*profileWindowMarkerOverlayIconWidth+pixelX]
 			if pixelY <= 10 && pixelX >= 7 && pixel == profileWindowMarkerColor(`A`) {
 				badgePixels++
 			}
-			if isProfileWindowMarkerBlueLineLogoPixel(pixel) {
-				bluePixels++
+			if isProfileWindowMarkerCyanLogoPixel(pixel) || isProfileWindowMarkerGreenLogoPixel(pixel) {
+				logoPixels++
 			}
 		}
 	}
-	if bluePixels == 0 {
-		t.Fatal(`small instance icon lost its embedded logo fingerprint`)
+	if logoPixels == 0 {
+		t.Fatal(`small instance icon lost its embedded linked-L logo`)
 	}
 	if badgePixels == 0 {
 		t.Fatal(`small instance icon lost its top-right badge`)
 	}
-}
-
-func isProfileWindowMarkerWhiteLogoPixel(pixel uint32) bool {
-	_, red, green, blue := splitProfileWindowMarkerARGB(pixel)
-	return red >= 230 && green >= 230 && blue >= 230
 }
 
 func isProfileWindowMarkerGlyphInkPixel(pixel uint32) bool {
@@ -345,9 +334,14 @@ func isProfileWindowMarkerGlyphInkPixel(pixel uint32) bool {
 	return alpha >= 200 && red <= 96 && green <= 96 && blue <= 96
 }
 
-func isProfileWindowMarkerBlueLineLogoPixel(pixel uint32) bool {
-	_, red, green, blue := splitProfileWindowMarkerARGB(pixel)
-	return blue >= 200 && green <= 90 && red <= 35
+func isProfileWindowMarkerCyanLogoPixel(pixel uint32) bool {
+	alpha, red, green, blue := splitProfileWindowMarkerARGB(pixel)
+	return alpha >= 180 && red <= 100 && green >= 130 && blue >= 180
+}
+
+func isProfileWindowMarkerGreenLogoPixel(pixel uint32) bool {
+	alpha, red, green, blue := splitProfileWindowMarkerARGB(pixel)
+	return alpha >= 180 && red <= 120 && green >= 150 && blue <= 210
 }
 
 func splitProfileWindowMarkerARGB(pixel uint32) (uint8, uint8, uint8, uint8) {

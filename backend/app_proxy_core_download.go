@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/apppath"
-	"ant-chrome/backend/internal/fsutil"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 type ProxyCoreDownloadRequest struct {

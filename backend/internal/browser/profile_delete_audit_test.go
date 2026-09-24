@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestPermanentlyDeleteRemovesUserDataDirAndWritesAudit(t *testing.T) {

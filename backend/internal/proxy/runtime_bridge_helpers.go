@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"ant-chrome/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/fsutil"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"

@@ -1,8 +1,8 @@
 package browser
 
 import (
-	"ant-chrome/backend/internal/apppath"
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/config"
 	"net/http"
 	"os/exec"
 	"sync"

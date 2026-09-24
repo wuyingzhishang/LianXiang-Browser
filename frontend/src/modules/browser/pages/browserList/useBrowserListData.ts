@@ -5,6 +5,8 @@ import { EventsOn } from '../../../../wailsjs/runtime/runtime'
 
 const PROFILE_LIST_FALLBACK_REFRESH_MS = 15_000
 const APP_READY_EVENT = 'app:ready'
+const INITIAL_LOAD_RETRY_MS = 500
+const INITIAL_LOAD_MAX_RETRIES = 20
 
 interface UseBrowserListDataOptions {
   loadCores: () => Promise<void>
@@ -21,6 +23,7 @@ export function useBrowserListData({ loadCores }: UseBrowserListDataOptions) {
   const silentRefreshInFlightRef = useRef(false)
   const initialLoadInFlightRef = useRef(false)
   const initialLoadQueuedRef = useRef(false)
+  const initialLoadRetryCountRef = useRef(0)
 
   const updatePendingIds = (
     setter: React.Dispatch<React.SetStateAction<Set<string>>>,
@@ -129,6 +132,19 @@ export function useBrowserListData({ loadCores }: UseBrowserListDataOptions) {
         if (!disposed && initialLoadQueuedRef.current) {
           initialLoadQueuedRef.current = false
           loadInitialData()
+          return
+        }
+
+        // Wails can render the window before backend startup finishes. A
+        // pre-start BrowserProfileList call returns an empty list, so retry
+        // briefly instead of making a valid database look empty on reopen.
+        if (!disposed && profilesRef.current.length === 0 && initialLoadRetryCountRef.current < INITIAL_LOAD_MAX_RETRIES) {
+          initialLoadRetryCountRef.current += 1
+          window.setTimeout(() => {
+            if (!disposed) loadInitialData()
+          }, INITIAL_LOAD_RETRY_MS)
+        } else if (profilesRef.current.length > 0) {
+          initialLoadRetryCountRef.current = 0
         }
       })
     }

@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 	"strings"
 )
 

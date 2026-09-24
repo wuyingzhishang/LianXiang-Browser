@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"ant-chrome/backend/internal/automation"
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/automation"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // BrowserStarter 浏览器启动接口（由 App 层实现并注入）

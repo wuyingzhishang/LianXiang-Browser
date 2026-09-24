@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"ant-chrome/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/apppath"
 	"context"
 	"crypto/sha256"
 	"crypto/tls"

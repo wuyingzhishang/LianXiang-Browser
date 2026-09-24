@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 const DefaultIPHealthURL = "https://my.ippure.com/v1/info"

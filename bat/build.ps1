@@ -4,6 +4,11 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
 
+# Add local toolchain to PATH
+$localTools = Join-Path $repoRoot ".local-tools"
+$env:PATH = "$localTools\bin;$localTools\go\bin;$env:PATH"
+Write-Host "Using toolchain from: $localTools"
+
 function Invoke-NativeCommand {
     param(
         [Parameter(Mandatory = $true)]
@@ -41,7 +46,7 @@ function Assert-RequiredSourceFiles {
 
 try {
     Write-Host "========================================"
-    Write-Host "  Ant Browser - Build Script"
+    Write-Host "  链享浏览器 - Build Script"
     Write-Host "========================================"
     Write-Host ""
     Write-Host "Current workdir: $repoRoot"
@@ -49,7 +54,7 @@ try {
 
     $proxyHost = "127.0.0.1"
     $proxyPort = "7890"
-    $useProxy = $true
+    $useProxy = $false
 
     if ($useProxy) {
         Write-Host "[0/7] Configuring proxy..."
@@ -60,10 +65,19 @@ try {
         $env:https_proxy = $proxyValue
         $env:GOPROXY = "https://goproxy.cn,direct"
 
-        & npm config set proxy $proxyValue | Out-Null
-        & npm config set https-proxy $proxyValue | Out-Null
+        try {
+            & npm config set proxy $proxyValue 2>$null | Out-Null
+            & npm config set https-proxy $proxyValue 2>$null | Out-Null
+        } catch {
+            Write-Host "Warning: Failed to set npm proxy (non-critical)"
+        }
 
         Write-Host "OK proxy configured: ${proxyHost}:${proxyPort}"
+        Write-Host ""
+    } else {
+        Write-Host "[0/7] Configuring Go proxy..."
+        $env:GOPROXY = "https://goproxy.cn,direct"
+        Write-Host "OK using Go proxy: goproxy.cn"
         Write-Host ""
     }
 
@@ -77,8 +91,8 @@ try {
     Write-Host "[1/7] Installing frontend dependencies..."
     Push-Location (Join-Path $repoRoot "frontend")
     try {
-        Invoke-NativeCommand -FilePath "npm" -Arguments @("install")
-        Invoke-NativeCommand -FilePath "npm" -Arguments @("run", "ensure:native")
+        Invoke-NativeCommand -FilePath "npm.cmd" -Arguments @("install")
+        Invoke-NativeCommand -FilePath "npm.cmd" -Arguments @("run", "ensure:native")
     }
     finally {
         Pop-Location
@@ -106,7 +120,7 @@ try {
     Write-Host "[4/7] Generating Wails bindings..."
     Invoke-NativeCommand -FilePath "cmd" -Arguments @("/c", "call bat\generate-bindings.bat --no-pause")
 
-    $binaryPath = Join-Path $repoRoot "build/bin/ant-chrome.exe"
+    $binaryPath = Join-Path $repoRoot "build/bin/lianxiang-browser.exe"
 
     Write-Host ""
     Write-Host "[5/7] Building frontend..."
@@ -115,7 +129,7 @@ try {
     }
     Push-Location (Join-Path $repoRoot "frontend")
     try {
-        Invoke-NativeCommand -FilePath "npm" -Arguments @("run", "build:clean")
+        Invoke-NativeCommand -FilePath "npm.cmd" -Arguments @("run", "build:clean")
     }
     finally {
         Pop-Location
@@ -145,7 +159,7 @@ try {
     Write-Host "  OK build completed"
     Write-Host "========================================"
     Write-Host ""
-    Write-Host "Executable: build\bin\ant-chrome.exe"
+    Write-Host "Executable: build\bin\lianxiang-browser.exe"
     exit 0
 }
 catch {
@@ -154,6 +168,10 @@ catch {
     exit 1
 }
 finally {
-    & npm config delete proxy 2>$null | Out-Null
-    & npm config delete https-proxy 2>$null | Out-Null
+    try {
+        & npm config delete proxy 2>$null | Out-Null
+        & npm config delete https-proxy 2>$null | Out-Null
+    } catch {
+        # Ignore cleanup errors
+    }
 }

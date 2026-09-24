@@ -1,17 +1,17 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "Ant Browser",
-  "outputfilename": "ant-chrome",
+  "name": "链享浏览器",
+  "outputfilename": "lianxiang-browser",
   "frontend:install": "npm install && npm run ensure:native",
   "frontend:build": "npm run build:clean",
   "author": {
-    "name": "Ant Chrome Team",
-    "email": "contact@antblack.de"
+    "name": "链享浏览器团队",
+    "email": "support@lianxiang-browser.local"
   },
   "info": {
-    "companyName": "Ant Chrome",
-    "productName": "Ant Browser",
-    "productVersion": "1.8.0",
+    "companyName": "链享浏览器",
+    "productName": "链享浏览器",
+    "productVersion": "1.9.3",
     "copyright": "Copyright © 2026",
     "comments": "面向多账号隔离、代理绑定和本地环境管理的桌面浏览器工具"
   },

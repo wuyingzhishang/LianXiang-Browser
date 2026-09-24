@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func (s *LaunchServer) createProfile(input browser.ProfileInput, requestedCode string) (*browser.Profile, string, int, string) {

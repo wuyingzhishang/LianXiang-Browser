@@ -1,6 +1,6 @@
 package browser
 
-import "ant-chrome/backend/internal/config"
+import "lianxiang-browser/backend/internal/config"
 
 type DashboardStats struct {
 	TotalInstances   int

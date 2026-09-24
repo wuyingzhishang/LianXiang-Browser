@@ -1,24 +1,24 @@
-﻿# Ant Browser
+# 链享浏览器
 
 > 面向多账号隔离、代理绑定和本地环境管理的桌面浏览器工具（Windows / Linux / macOS unsigned）。
 
-[![Release](https://img.shields.io/github/v/release/black-ant/Ant-Browser?sort=semver)](https://github.com/black-ant/Ant-Browser/releases)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](https://github.com/black-ant/Ant-Browser/releases)
-[![Issues](https://img.shields.io/github/issues/black-ant/Ant-Browser)](https://github.com/black-ant/Ant-Browser/issues)
+[![Release](https://img.shields.io/github/v/release/wuyingzhishang/LianXiang-Browser?sort=semver)](https://github.com/wuyingzhishang/LianXiang-Browser/releases)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](https://github.com/wuyingzhishang/LianXiang-Browser/releases)
+[![Issues](https://img.shields.io/github/issues/wuyingzhishang/LianXiang-Browser)](https://github.com/wuyingzhishang/LianXiang-Browser/issues)
 
-当前版本：`1.8.1` · 2026-09-14
+当前版本：`1.9.3` · 2026-09-24
 
 ## 推荐内核项目
 
-Ant Browser 当前推荐配套使用的浏览器内核，来源于开源项目 [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)。
+链享浏览器 当前推荐配套使用的浏览器内核，来源于开源项目 [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)。
 
 如果你正在寻找可直接下载和维护的指纹内核版本，建议先查看它的 Releases 页面：
 
 - <https://github.com/adryfish/fingerprint-chromium/releases>
 
-这个项目为 Ant Browser 的内核准备提供了直接可用的基础来源，这里先对原项目做明确推荐与致谢。
+这个项目为 链享浏览器 的内核准备提供了直接可用的基础来源，这里先对原项目做明确推荐与致谢。
 
-Ant Browser 的目标很明确：在一台桌面设备上，帮助用户稳定管理多个彼此隔离的浏览器实例，并配合代理池、浏览器内核和快捷启动能力完成日常运营或测试工作。
+链享浏览器 的目标很明确：在一台桌面设备上，帮助用户稳定管理多个彼此隔离的浏览器实例，并配合代理池、浏览器内核和快捷启动能力完成日常运营或测试工作。
 
 ## 目录
 
@@ -39,7 +39,7 @@ Ant Browser 的目标很明确：在一台桌面设备上，帮助用户稳定�
 
 ## 项目简介
 
-Ant Browser 适合以下场景：
+链享浏览器 适合以下场景：
 
 - 多账号环境隔离
 - 跨境电商与社媒账号运营
@@ -54,6 +54,49 @@ Ant Browser 适合以下场景：
 - 在本地保存配置和运行数据，便于自主控制
 
 ## 近期更新
+
+### 1.9.3 · 2026-09-24
+
+- 实例启动稳定性：启动前清理无活动浏览器留下的 Chrome 单实例锁，降低升级或异常退出后实例在就绪前退出的问题。
+- Windows 发布集：重新生成本地 EXE、NSIS 安装包和便携 ZIP，三个产物及其 SHA-256 统一写入一个 `SHA256SUMS.txt`。
+- 发布维护：清理旧版本发行产物和临时 staging，发布目录只保留当前版本文件与说明文档。
+
+### 1.9.2 · 2026-09-24
+
+- Windows 安装包重构：统一生成 NSIS 安装包、本地 EXE、便携 ZIP，并将产物 SHA-256 汇总到单一文本文件。
+- 数据目录设置：误选 `Program Files` 安装目录时自动改用当前用户可写目录，并在保存后显示实际数据位置。
+- 数据目录设置：无写入权限时显示具体原因和可写目录建议，避免笼统的保存失败提示。
+- 安装路径兼容：保留 `D:\Program Files\链享浏览器` 等既有安装位置，用户数据目录和单实例状态不迁移、不删除。
+- 发布清理：每次发布前清理旧的输出和临时 staging，避免旧版本文件混入发行包。
+
+### 1.9.1 · 2026-09-23
+
+- 修复受保护安装目录启动：Windows 安装到 `Program Files` 时，运行数据和单实例锁自动放到用户可写目录，避免首次安装后再次打开无响应。
+- 修复单实例唤醒：回环激活通道连接失败时，仍尝试通过系统窗口 API 唤醒已有窗口。
+- 保持便携版行为：安装到普通可写目录时，数据仍保留在应用目录。
+- 完整提供 Windows 安装包、本地 EXE、便携 ZIP 和 SHA-256 校验文件。
+
+### 1.9.0 · 2026-09-22
+
+- 数据目录设置：可在系统设置中自由选择应用数据目录，支持查看当前目录、浏览选择和关闭自定义目录。
+- 重启后持久化：目录选择保存到稳定的用户状态配置，退出后再次启动仍使用同一个目录。
+- 数据迁移与恢复：支持迁移 `data`、`chrome` 和配置文件；启动时自动补齐空目录和旧版本遗留的空数据库，避免实例列表消失。
+- 启动稳定：安装到 Windows 受保护目录（例如 `Program Files`）时，运行数据和单实例状态自动放到用户可写目录；便携版或普通可写目录仍使用安装目录。需要放到其他位置时可在系统设置中选择自定义目录。
+- 发布产物：本版本提供 Windows 本地 EXE、NSIS 安装包、便携 ZIP，以及集中记录三个产物 SHA-256 的汇总文件。
+
+### 1.8.3 · 2026-09-22
+
+- 书签功能增强：支持书签分组、全局禁用和单实例禁用配置，完整移植二开版本书签表扩展能力
+- 数据库迁移：新增 v19 migration 补齐书签分组和禁用字段，兼容旧安装幂等执行
+- 备份兼容：备份恢复 SQL 扩展为完整书签列集，确保跨版本恢复不丢失字段
+- 代码适配：DAO 层、业务层和备份流程全链路支持书签新增字段
+
+### 1.8.2 · 2026-09-21
+
+- 品牌统一：Go 模块名从 `ant-chrome` 迁移至 `lianxiang-browser`，统一可执行文件名为 `lianxiang-browser.exe`，与主分支版本命名保持一致。
+- 数据兼容：确保与主分支 1.4.6 及后续版本的数据目录兼容性，升级后无缝迁移用户配置和浏览器实例数据。
+- 构建规范：更新所有构建脚本、发布脚本和诊断工具引用，移除 `ant-chrome` 残留文件，确保发布产物命名一致性。
+- 依赖安全：升级前端依赖至修复版本，解决已知安全漏洞。
 
 ### 1.8.0 · 2026-09-03
 
@@ -123,7 +166,7 @@ Ant Browser 适合以下场景：
 ### 1.1.0 · 2026-03-19
 
 - 完善 Linux 支持：补齐 Linux 环境下的开发、打包、安装、启动与运行链路，并持续修复安装版启动与退出稳定性问题
-- 补齐 macOS unsigned 内测构建链路：支持在原生 macOS 主机上打包 `.app` / `.zip`，并将用户状态目录放到 `~/Library/Application Support/ant-browser`
+- 补齐 macOS unsigned 内测构建链路：支持在原生 macOS 主机上打包 `.app` / `.zip`，并将用户状态目录放到 `~/Library/Application Support/lianxiang-browser`
 - 新增 SOCKS 代理测试支持：SOCKS 代理能力已进入测试阶段，后续会继续验证稳定性与兼容性
 - 实验性支持接口触发浏览器：支持通过接口启动浏览器实例，便于后续接入自动化流程
 
@@ -196,11 +239,11 @@ Ant Browser 适合以下场景：
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=black-ant%2Fant-browser&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=wuyingzhishang%2FLianXiang-Browser&type=date&legend=top-left">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=black-ant/ant-browser&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=black-ant/ant-browser&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=black-ant/ant-browser&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wuyingzhishang/LianXiang-Browser&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wuyingzhishang/LianXiang-Browser&type=date&legend=top-left" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wuyingzhishang/LianXiang-Browser&type=date&legend=top-left" />
   </picture>
 </a>
 
@@ -217,11 +260,11 @@ Ant Browser 适合以下场景：
 
 ### 下载与运行
 
-1. 前往 Releases 页面下载最新版本：<https://github.com/black-ant/Ant-Browser/releases>
-2. 安装版直接运行 `AntBrowser-Setup-*.exe`
-3. 便携版解压后运行 `ant-chrome.exe`
-4. Linux 包下载后可直接安装 `ant-browser_<version>_<arch>.deb`，或解压 `tar.gz` 后运行 `ant-chrome`
-5. macOS unsigned 包解压后运行 `AntBrowser-<version>-macos-<arch>.app`；如被 Gatekeeper 拦截，请对本机测试包执行 `xattr -dr com.apple.quarantine <app路径>` 后再打开
+1. 前往 Releases 页面下载最新版本：<https://github.com/wuyingzhishang/LianXiang-Browser/releases>
+2. 安装版直接运行 `LianXiangBrowser-Setup-*.exe`
+3. 便携版解压后运行 `lianxiang-browser.exe`
+4. Linux 包下载后可直接安装 `lianxiang-browser_<version>_<arch>.deb`，或解压 `tar.gz` 后运行 `lianxiang-browser`
+5. macOS unsigned 包解压后运行 `LianXiangBrowser-<version>-macos-<arch>.app`；如被 Gatekeeper 拦截，请对本机测试包执行 `xattr -dr com.apple.quarantine <app路径>` 后再打开
 
 ### 从源码运行
 
@@ -282,7 +325,7 @@ data/automation/scripts/<script-id>/
 
 ### Windows 发布打包（源码）
 
-Windows 发布脚本默认保持原有 NSIS 安装包行为，也可以生成便携 ZIP，或一次生成两种产物：
+Windows 发布脚本每次先清理旧的 `publish\output\` 和 `publish\staging\`，再生成本地 EXE、NSIS 安装包、便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
 bat\publish.bat zip
@@ -290,9 +333,19 @@ bat\publish.bat both
 bat\publish.bat -Target WINDOWS -WindowsFormat INSTALLER
 bat\publish.bat -Target WINDOWS -WindowsFormat PORTABLE
 bat\publish.bat -Target WINDOWS -WindowsFormat BOTH
+bat\publish.bat both -Version 1.9.3
 ```
 
-省略 `-WindowsFormat` 时等同于 `INSTALLER`。`zip` 快捷命令只生成便携 ZIP，`both` 快捷命令同时生成安装包和便携 ZIP。安装包和便携 ZIP 输出到 `publish\output\`。
+省略 `-WindowsFormat` 时等同于 `INSTALLER`；要生成完整 Windows 发布集请使用 `BOTH` 或 `both` 快捷命令。`zip` 快捷命令只生成便携 ZIP。所有产物输出到 `publish\output\`，其 SHA-256 统一记录在 `SHA256SUMS.txt`。
+
+Windows 输出文件：
+
+```text
+LianXiangBrowser-<version>-windows-amd64.exe
+LianXiangBrowser-Setup-<version>.exe
+LianXiangBrowser-<version>-windows-amd64-portable.zip
+SHA256SUMS.txt
+```
 
 ### Linux 发布打包（源码）
 
@@ -376,7 +429,7 @@ Windows 升级或卸载旧版本时，安装器会先将旧安装目录中的 `b
 
 先检查代理节点本身是否可用，再确认该实例已经正确绑定代理。建议启动后访问 IP 检测网站复核当前出口。
 
-如果代理池里本地客户端可用节点很多，但 Ant Browser 中“只展示可用”数量明显偏少，先确认当前 `default_connector_type` 是否与本地客户端一致。Ant Browser 不会在 `xray` 组合栈和 `mihomo` 栈之间自动混用；切换连接栈后需要重新测速。
+如果代理池里本地客户端可用节点很多，但 链享浏览器 中“只展示可用”数量明显偏少，先确认当前 `default_connector_type` 是否与本地客户端一致。链享浏览器 不会在 `xray` 组合栈和 `mihomo` 栈之间自动混用；切换连接栈后需要重新测速。
 
 ### 3. 实例太多，怎么快速找到目标实例？
 
@@ -409,6 +462,7 @@ Windows 升级或卸载旧版本时，安装器会先将旧安装目录中的 `b
 ## 开发与发布文档
 
 - Windows 开发与发布：[`bat/README.md`](bat/README.md)
+- Windows 发布产物与校验：[`docs/release-windows.md`](docs/release-windows.md)
 - Linux 打包：[`publish/linux/README.md`](publish/linux/README.md)
 - macOS unsigned 打包：[`publish/mac/README.md`](publish/mac/README.md)
 - 公共发布快照：[`tools/public-release/README.md`](tools/public-release/README.md)
@@ -416,8 +470,8 @@ Windows 升级或卸载旧版本时，安装器会先将旧安装目录中的 `b
 
 ## 支持与反馈
 
-- Releases：<https://github.com/black-ant/Ant-Browser/releases>
-- Issues：<https://github.com/black-ant/Ant-Browser/issues>
+- Releases：<https://github.com/wuyingzhishang/LianXiang-Browser/releases>
+- Issues：<https://github.com/wuyingzhishang/LianXiang-Browser/issues>
 - 感谢以下社区的支持：<https://linux.do/>
 
 ## License

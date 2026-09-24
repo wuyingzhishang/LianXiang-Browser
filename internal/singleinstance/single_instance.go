@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"lianxiang-browser/backend"
 	"log"
 	"net"
 	"os"
@@ -46,7 +47,18 @@ func (g *Guard) Activations() <-chan ActivationRequest {
 func Acquire(appRoot string) (*Guard, bool, error) {
 	stateRoot := singleInstanceStateRoot(appRoot)
 	if err := os.MkdirAll(stateRoot, 0o755); err != nil {
-		return nil, false, fmt.Errorf("准备单实例状态目录失败: %w", err)
+		// A previously selected directory may be unavailable (offline drive,
+		// revoked permission, or a removed folder). Fall back to the stable
+		// application state root so launching the desktop shortcut still opens
+		// the recovery UI instead of exiting silently.
+		fallbackRoot := strings.TrimSpace(backend.RuntimeDefaultStateRoot(appRoot))
+		if fallbackRoot == "" || filepath.Clean(fallbackRoot) == filepath.Clean(stateRoot) {
+			return nil, false, fmt.Errorf("准备单实例状态目录失败: %w", err)
+		}
+		if fallbackErr := os.MkdirAll(fallbackRoot, 0o755); fallbackErr != nil {
+			return nil, false, fmt.Errorf("准备单实例状态目录失败: %w（回退目录也不可用: %v）", err, fallbackErr)
+		}
+		stateRoot = fallbackRoot
 	}
 
 	lockPath := filepath.Join(stateRoot, singleInstanceLockFile)
@@ -107,18 +119,26 @@ func writeSingleInstanceLockInfo(file *os.File, info singleInstanceLockInfo) err
 func signalExistingSingleInstance(lockPath string) bool {
 	for attempt := 0; attempt < 5; attempt++ {
 		info, err := readSingleInstanceLock(lockPath)
-		if err == nil && strings.TrimSpace(info.Addr) != "" {
+		if err == nil && info.PID > 0 {
 			grantExistingSingleInstanceForeground(info.PID)
-			conn, dialErr := net.DialTimeout("tcp", info.Addr, 350*time.Millisecond)
-			if dialErr == nil {
-				_ = conn.SetDeadline(time.Now().Add(1200 * time.Millisecond))
-				_, _ = conn.Write([]byte("activate\n"))
-				_, _ = bufio.NewReader(conn).ReadString('\n')
-				_ = conn.Close()
-				ActivateExistingWindow(info.PID)
-				return true
+
+			// The loopback listener lets the primary process coordinate activation
+			// with Wails. It is intentionally best-effort: during a slow startup,
+			// security software can briefly reject the connection even though the
+			// lock owner is healthy. A valid PID plus the held file lock is enough
+			// to identify the existing instance, so fall back to the native window
+			// activation path instead of making the second click appear inert.
+			if strings.TrimSpace(info.Addr) != "" {
+				conn, dialErr := net.DialTimeout("tcp", info.Addr, 350*time.Millisecond)
+				if dialErr == nil {
+					_ = conn.SetDeadline(time.Now().Add(1200 * time.Millisecond))
+					_, _ = conn.Write([]byte("activate\n"))
+					_, _ = bufio.NewReader(conn).ReadString('\n')
+					_ = conn.Close()
+				}
 			}
 			ActivateExistingWindow(info.PID)
+			return true
 		}
 		time.Sleep(120 * time.Millisecond)
 	}

@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/database"
 	"path/filepath"
 	"testing"
 )

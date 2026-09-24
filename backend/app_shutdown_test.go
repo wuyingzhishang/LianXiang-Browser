@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 	"sync"
 	"testing"
 	"time"

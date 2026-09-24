@@ -1,18 +1,22 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/apppath"
-	"ant-chrome/backend/internal/automation"
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/database"
-	"ant-chrome/backend/internal/launchcode"
-	"ant-chrome/backend/internal/logger"
-	"ant-chrome/backend/internal/proxy"
 	"context"
+	"database/sql"
 	"fmt"
+	"lianxiang-browser/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/automation"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/database"
+	"lianxiang-browser/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/launchcode"
+	"lianxiang-browser/backend/internal/logger"
+	"lianxiang-browser/backend/internal/proxy"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -24,6 +28,9 @@ func (a *App) startup(ctx context.Context) {
 	if err := apppath.EnsureWritableLayout(a.appRoot); err != nil {
 		runtime.LogFatal(ctx, fmt.Sprintf("初始化 Linux 用户数据目录失败: %v", err))
 		return
+	}
+	if err := a.restoreCustomDataDirectory(); err != nil {
+		logger.New("App").Warn("自定义数据目录迁移补偿失败", logger.F("error", err))
 	}
 
 	cfg := a.startupLoadConfig()
@@ -45,6 +52,9 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	a.ensureDefaultCores()
+	if err := a.restoreDetachedInstallDatabase(cfg); err != nil {
+		log.Warn("安装目录数据库迁移失败", logger.F("error", err))
+	}
 	a.startupInitInterceptor(log, cfg)
 
 	db, err := a.startupInitDatabase(cfg)
@@ -54,6 +64,13 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.db = db
+	if apppath.IsDetached(a.appRoot) {
+		if profiles, queryErr := countDatabaseRows(db.GetConn(), "browser_profiles"); queryErr == nil {
+			log.Info("运行时数据库已打开", logger.F("path", a.resolveAppPath(cfg.Database.SQLite.Path)), logger.F("profiles", profiles))
+		} else {
+			log.Warn("读取运行时实例数量失败", logger.F("path", a.resolveAppPath(cfg.Database.SQLite.Path)), logger.F("error", queryErr))
+		}
+	}
 	if err := db.Migrate(); err != nil {
 		log.Error("数据库迁移失败", logger.F("error", err))
 	}
@@ -68,6 +85,150 @@ func (a *App) startup(ctx context.Context) {
 	a.emitRuntimeEvent("app:ready")
 
 	log.Info("应用启动成功")
+}
+
+// restoreCustomDataDirectory repairs the upgrade path where an older build
+// created an empty SQLite file in the selected directory before the packaged
+// data was copied. A populated source database remains authoritative while a
+// populated custom database is always preserved.
+func (a *App) restoreCustomDataDirectory() error {
+	if a == nil || strings.TrimSpace(apppath.GetCustomDataDir()) == "" {
+		return nil
+	}
+	targetRoot := a.appStateRootAbs()
+	sources := []string{RuntimeDefaultStateRoot(a.appRoot), a.appRootAbs()}
+	for _, sourceRoot := range sources {
+		sourceRoot = filepath.Clean(strings.TrimSpace(sourceRoot))
+		if sourceRoot == "" || strings.EqualFold(sourceRoot, filepath.Clean(targetRoot)) {
+			continue
+		}
+		sourceDB := filepath.Join(sourceRoot, "data", "app.db")
+		sourceCount, err := countSQLiteRows(sourceDB, "browser_profiles")
+		if err != nil || sourceCount == 0 {
+			continue
+		}
+		targetDB := filepath.Join(targetRoot, "data", "app.db")
+		targetCount, targetErr := countSQLiteRows(targetDB, "browser_profiles")
+		if targetErr != nil && !os.IsNotExist(targetErr) {
+			return targetErr
+		}
+		if targetErr == nil && targetCount > 0 {
+			return nil
+		}
+		if err := copyRuntimeFile(sourceDB, targetDB); err != nil {
+			return err
+		}
+		for _, suffix := range []string{"-wal", "-shm"} {
+			source := sourceDB + suffix
+			target := targetDB + suffix
+			if _, statErr := os.Stat(source); statErr == nil {
+				if err := copyRuntimeFile(source, target); err != nil {
+					return err
+				}
+			} else if !os.IsNotExist(statErr) {
+				return statErr
+			}
+		}
+		return nil
+	}
+	return nil
+}
+
+// restoreDetachedInstallDatabase recovers profiles from an older install when
+// the first detached launch created an empty state database before migration.
+// It only replaces a state database with zero profiles; an existing populated
+// state database always wins.
+func (a *App) restoreDetachedInstallDatabase(cfg *config.Config) error {
+	if a == nil || cfg == nil || !apppath.IsDetached(a.appRoot) {
+		return nil
+	}
+
+	dbPath := strings.TrimSpace(cfg.Database.SQLite.Path)
+	if dbPath == "" || filepath.IsAbs(dbPath) {
+		return nil
+	}
+	relativePath := fsutil.NormalizePathInput(dbPath)
+	if relativePath == "" {
+		return nil
+	}
+	installPath := filepath.Join(apppath.InstallRoot(a.appRoot), relativePath)
+	statePath := a.resolveAppPath(relativePath)
+	if strings.EqualFold(installPath, statePath) {
+		return nil
+	}
+	if _, err := os.Stat(installPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	installCount, err := countSQLiteRows(installPath, "browser_profiles")
+	if err != nil || installCount == 0 {
+		return err
+	}
+	if _, err := os.Stat(statePath); err == nil {
+		stateCount, countErr := countSQLiteRows(statePath, "browser_profiles")
+		if countErr != nil {
+			return countErr
+		}
+		if stateCount > 0 {
+			return nil
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	if err := copyRuntimeFile(installPath, statePath); err != nil {
+		return err
+	}
+	for _, suffix := range []string{"-wal", "-shm"} {
+		source := installPath + suffix
+		target := statePath + suffix
+		if _, err := os.Stat(source); err == nil {
+			if err := copyRuntimeFile(source, target); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func countSQLiteRows(path, table string) (int, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "no such table") {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return count, nil
+}
+
+func countDatabaseRows(db *sql.DB, table string) (int, error) {
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func copyRuntimeFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0644)
 }
 
 func (a *App) startupLoadConfig() *config.Config {

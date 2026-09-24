@@ -3,7 +3,7 @@ package launchcode
 import (
 	"net/http"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 // ProfileWriteRequest 用于创建/更新实例配置。

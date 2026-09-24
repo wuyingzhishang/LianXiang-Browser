@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/database"
 )
 
 func TestBackupProfileIDsFromInput(t *testing.T) {

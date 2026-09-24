@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Generate the Ant Chrome instance window marker logo (multi-size PNG).
+"""Generate the 链享浏览器 instance window marker logo (PNG).
 
 Rendering logic lives in ant_logo.py; this script only wraps its CLI.
 Usage:

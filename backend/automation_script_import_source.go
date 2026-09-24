@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 const (

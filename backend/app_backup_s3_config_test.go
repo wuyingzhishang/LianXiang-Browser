@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 	"os"
 	"path/filepath"
 	"strings"

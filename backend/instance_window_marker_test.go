@@ -31,7 +31,7 @@ func TestProfileWindowMarkerTaskbarOverlayReappliesAfterInterval(t *testing.T) {
 
 func TestProfileWindowMarkerIconResourcePathPrefersInstalledIcon(t *testing.T) {
 	appRoot := t.TempDir()
-	installedIcon := filepath.Join(appRoot, "AntBrowser.ico")
+	installedIcon := filepath.Join(appRoot, "LianXiangBrowser.ico")
 	if err := os.WriteFile(installedIcon, []byte("ico"), 0o600); err != nil {
 		t.Fatalf("write installed icon: %v", err)
 	}
@@ -183,14 +183,14 @@ func TestProfileWindowMarkerWindowStateResetsWhenProcessChanges(t *testing.T) {
 
 func TestProfileWindowMarkerAppUserModelIDUsesStableProfileID(t *testing.T) {
 	appID := profileWindowMarkerAppUserModelID("profile one/中文:A", "B")
-	if appID != "AntBrowser.Instance.profile.one.A" {
+	if appID != "LianXiangBrowser.Instance.profile.one.A" {
 		t.Fatalf("unexpected AppUserModelID: %q", appID)
 	}
 }
 
 func TestProfileWindowMarkerAppUserModelIDFallsBackToMarkerCode(t *testing.T) {
 	appID := profileWindowMarkerAppUserModelID("", "A")
-	if appID != "AntBrowser.Instance.A" {
+	if appID != "LianXiangBrowser.Instance.A" {
 		t.Fatalf("unexpected fallback AppUserModelID: %q", appID)
 	}
 }

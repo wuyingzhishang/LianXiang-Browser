@@ -602,6 +602,22 @@ export function CreateGroup(arg1) {
   return window['go']['main']['App']['CreateGroup'](arg1);
 }
 
+export function DataDirectoryGetInfo() {
+  return window['go']['main']['App']['DataDirectoryGetInfo']();
+}
+
+export function DataDirectoryMigrate(arg1) {
+  return window['go']['main']['App']['DataDirectoryMigrate'](arg1);
+}
+
+export function DataDirectorySelectDirectory() {
+  return window['go']['main']['App']['DataDirectorySelectDirectory']();
+}
+
+export function DataDirectorySetCustom(arg1, arg2) {
+  return window['go']['main']['App']['DataDirectorySetCustom'](arg1, arg2);
+}
+
 export function DeleteGroup(arg1) {
   return window['go']['main']['App']['DeleteGroup'](arg1);
 }

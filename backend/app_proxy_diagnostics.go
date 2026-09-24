@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/proxy"
+	"lianxiang-browser/backend/internal/proxy"
 	"strings"
 	"time"
 )

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 func filterAutomationProfiles(items []browser.Profile, keep func(browser.Profile) bool) []browser.Profile {

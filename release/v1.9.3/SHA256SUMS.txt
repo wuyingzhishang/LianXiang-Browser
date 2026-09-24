@@ -1,0 +1,3 @@
+bf6fc16714485e3f2e55dbc747fd7028f056c97858496df751773776f54b32ad  LianXiangBrowser-1.9.3-windows-amd64-portable.zip
+f6eced7a38a8c77e45d24d21d830aac3fdb60006ac004df6031cbe1505d6277f  LianXiangBrowser-1.9.3-windows-amd64.exe
+e34ce7715fb632ef2ab9dde9f4bc4329286af81658420b9f56e14bb38f587a94  LianXiangBrowser-Setup-1.9.3.exe

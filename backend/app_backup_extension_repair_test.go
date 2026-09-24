@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/backup"
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/backup"
+	"lianxiang-browser/backend/internal/database"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"

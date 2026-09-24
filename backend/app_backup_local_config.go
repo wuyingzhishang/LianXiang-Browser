@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +12,7 @@ import (
 
 const (
 	backupLocalConfigFileName = "backup.local.yaml"
-	backupLocalConfigDirName  = "Ant Browser"
+	backupLocalConfigDirName  = "链享浏览器"
 )
 
 func defaultBackupLocalConfigPath() string {

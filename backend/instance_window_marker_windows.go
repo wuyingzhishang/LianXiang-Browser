@@ -823,7 +823,7 @@ func clearProfileWindowMarkerTitle(hwnd uintptr) {
 		return
 	}
 	if pageTitle == "" {
-		pageTitle = "Ant Browser"
+		pageTitle = "链享浏览器"
 	}
 	setProfileWindowMarkerTitle(hwnd, pageTitle)
 }

@@ -1,13 +1,13 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/automation"
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/database"
-	"ant-chrome/backend/internal/launchcode"
-	"ant-chrome/backend/internal/logger"
-	"ant-chrome/backend/internal/proxy"
+	"lianxiang-browser/backend/internal/automation"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/database"
+	"lianxiang-browser/backend/internal/launchcode"
+	"lianxiang-browser/backend/internal/logger"
+	"lianxiang-browser/backend/internal/proxy"
 	"context"
 	"strings"
 	"sync"
@@ -85,7 +85,7 @@ func (a *App) appName() string {
 			return name
 		}
 	}
-	return "Ant Browser"
+	return "链享浏览器"
 }
 
 func (a *App) appVersion() string {

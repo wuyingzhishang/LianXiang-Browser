@@ -147,7 +147,7 @@ func profileWindowMarkerAppUserModelID(profileID, markerCode string) string {
 	if suffix == "" {
 		suffix = "unknown"
 	}
-	appID := "AntBrowser.Instance." + suffix
+	appID := "LianXiangBrowser.Instance." + suffix
 	if len(appID) > 128 {
 		appID = appID[:128]
 		appID = strings.TrimRight(appID, ".-_")
@@ -187,7 +187,7 @@ func sanitizeProfileWindowMarkerAppUserModelIDSuffix(value string) string {
 func applyProfileWindowMarkerTitle(currentTitle, markerCode, profileName string) string {
 	pageTitle := stripProfileWindowMarkerTitle(currentTitle)
 	if pageTitle == "" {
-		pageTitle = "Ant Browser"
+		pageTitle = "链享浏览器"
 	}
 	return profileWindowMarkerPrefix(markerCode, profileName) + pageTitle
 }
@@ -254,7 +254,7 @@ func (a *App) currentProfileWindowMarkerTarget(profileID string) (profileWindowM
 
 func profileWindowMarkerIconResourcePath(appRoot string) string {
 	candidates := []string{
-		filepath.Join(appRoot, "AntBrowser.ico"),
+		filepath.Join(appRoot, "LianXiangBrowser.ico"),
 		filepath.Join(appRoot, "build", "windows", "icon.ico"),
 	}
 	for _, candidate := range candidates {

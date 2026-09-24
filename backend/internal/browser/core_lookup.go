@@ -1,8 +1,8 @@
 package browser
 
 import (
-	"ant-chrome/backend/internal/fsutil"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/logger"
 	"fmt"
 	"os"
 	"strings"

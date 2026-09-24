@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 type RuntimeRequest struct {

@@ -1,7 +1,7 @@
 package s3
 
 import (
-	"ant-chrome/backend/internal/backup/channels"
+	"lianxiang-browser/backend/internal/backup/channels"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -89,7 +89,7 @@ func TestClientUploadListDownloadWithPrefixAndPagination(t *testing.T) {
 		Endpoint:        server.URL,
 		Region:          "us-east-1",
 		Bucket:          "backup-bucket",
-		Prefix:          "ant-chrome/backups/",
+		Prefix:          "lianxiang-browser/backups/",
 		AccessKeyID:     "access-key",
 		SecretAccessKey: "secret-key",
 		ForcePathStyle:  true,
@@ -252,8 +252,8 @@ type memoryS3 struct {
 func newMemoryS3() *memoryS3 {
 	return &memoryS3{
 		objects: map[string][]byte{
-			"ant-chrome/backups/ant-chrome-backup-20260830.zip": []byte("older"),
-			"ant-chrome/backups/ignore.json":                    []byte("metadata"),
+			"lianxiang-browser/backups/ant-chrome-backup-20260830.zip": []byte("older"),
+			"lianxiang-browser/backups/ignore.json":                    []byte("metadata"),
 		},
 	}
 }

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/launchcode"
+	"lianxiang-browser/backend/internal/launchcode"
 )
 
 const automationScriptPublicAPIInvokeDefaultTimeout = 31 * time.Minute

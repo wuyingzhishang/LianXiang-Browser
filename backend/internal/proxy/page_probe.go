@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 const defaultBrowserPageProbeConcurrency = 8

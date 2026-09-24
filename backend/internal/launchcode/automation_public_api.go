@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 const automationPublicHookRoutePrefix = "/api/automation/hooks/"

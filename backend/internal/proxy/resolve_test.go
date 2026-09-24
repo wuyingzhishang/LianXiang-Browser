@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestResolveProxyConfigPrefersExplicitConfig(t *testing.T) {

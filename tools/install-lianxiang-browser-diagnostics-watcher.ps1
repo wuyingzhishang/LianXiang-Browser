@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$InstallDir = 'E:\software\Ant Browser',
+    [string]$InstallDir = 'E:\software\链享浏览器',
     [switch]$Uninstall
 )
 
@@ -12,10 +12,10 @@ function Get-NormalizedPath {
     return [System.IO.Path]::GetFullPath($Path).TrimEnd('\')
 }
 $InstallDir = Get-NormalizedPath $InstallDir
-$sourcePath = Join-Path $PSScriptRoot 'ant-chrome-diagnostics-watcher.ps1'
+$sourcePath = Join-Path $PSScriptRoot 'lianxiang-browser-diagnostics-watcher.ps1'
 $diagnosticRoot = Join-Path $InstallDir 'data\diagnostics'
-$destinationPath = Join-Path $diagnosticRoot 'ant-chrome-diagnostics-watcher.ps1'
-$taskName = 'Ant Browser Diagnostics Watcher'
+$destinationPath = Join-Path $diagnosticRoot 'lianxiang-browser-diagnostics-watcher.ps1'
+$taskName = '链享浏览器 Diagnostics Watcher'
 $userId = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 if ($Uninstall) {
@@ -43,7 +43,7 @@ $action = New-ScheduledTaskAction -Execute $powershellPath -Argument $arguments 
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
 $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-$task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Read-only Ant Browser exit diagnostics; no process termination and no app restart.'
+$task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Read-only 链享浏览器 exit diagnostics; no process termination and no app restart.'
 $taskRoot = [string]'\'
 Register-ScheduledTask -TaskName $taskName -TaskPath $taskRoot -InputObject $task -Force | Out-Null
 Start-ScheduledTask -TaskName $taskName -TaskPath $taskRoot

@@ -1,6 +1,6 @@
 package backend
 
-import "ant-chrome/backend/internal/apppath"
+import "lianxiang-browser/backend/internal/apppath"
 
 // EnsureRuntimeLayout 为运行时准备已安装应用的用户可写目录。
 func EnsureRuntimeLayout(appRoot string) error {
@@ -15,6 +15,11 @@ func ResolveRuntimePath(appRoot, p string) string {
 // RuntimeStateRoot 返回当前运行时使用的状态目录。
 func RuntimeStateRoot(appRoot string) string {
 	return apppath.StateRoot(appRoot)
+}
+
+// RuntimeDefaultStateRoot 返回未启用自定义目录时的默认状态目录。
+func RuntimeDefaultStateRoot(appRoot string) string {
+	return apppath.DefaultStateRoot(appRoot)
 }
 
 // RuntimeUsesDetachedState 表示当前是否启用了“安装目录只读、状态目录独立”的模式。

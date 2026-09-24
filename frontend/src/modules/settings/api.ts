@@ -298,3 +298,68 @@ export async function saveLaunchServerSettings(port: number): Promise<LaunchServ
   }
   return normalizeLaunchServerSettings(await bindings.SaveLaunchServerSettings(port))
 }
+
+export interface DataDirectoryInfo {
+  currentDataDir: string
+  defaultDataDir: string
+  customDataDir: string
+  useCustomDataDir: boolean
+  isCustomDirValid: boolean
+}
+
+export interface DataDirectorySelectResult {
+  selected: boolean
+  directory: string
+}
+
+export interface DataDirectoryMigrateOptions {
+  sourceDir: string
+  targetDir: string
+  migrateData: boolean
+  migrateChrome: boolean
+  migrateConfig: boolean
+}
+
+export interface DataDirectoryMigrateResult {
+  success: boolean
+  message: string
+  error?: string
+}
+
+export async function fetchDataDirectoryInfo(): Promise<DataDirectoryInfo> {
+  const bindings: any = await getBindings()
+  if (!bindings?.DataDirectoryGetInfo) {
+    return {
+      currentDataDir: '',
+      defaultDataDir: '',
+      customDataDir: '',
+      useCustomDataDir: false,
+      isCustomDirValid: false,
+    }
+  }
+  return bindings.DataDirectoryGetInfo()
+}
+
+export async function selectDataDirectory(): Promise<DataDirectorySelectResult> {
+  const bindings: any = await getBindings()
+  if (!bindings?.DataDirectorySelectDirectory) {
+    return { selected: false, directory: '' }
+  }
+  return bindings.DataDirectorySelectDirectory()
+}
+
+export async function setCustomDataDirectory(directory: string, useCustom: boolean): Promise<DataDirectoryInfo> {
+  const bindings: any = await getBindings()
+  if (!bindings?.DataDirectorySetCustom) {
+    throw new Error('数据目录设置功能不可用')
+  }
+  return bindings.DataDirectorySetCustom(directory, useCustom)
+}
+
+export async function migrateDataDirectory(options: DataDirectoryMigrateOptions): Promise<DataDirectoryMigrateResult> {
+  const bindings: any = await getBindings()
+  if (!bindings?.DataDirectoryMigrate) {
+    throw new Error('数据迁移功能不可用')
+  }
+  return bindings.DataDirectoryMigrate(options)
+}

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestChainSocks5RuntimeConfigRoutesThroughSecondHop(t *testing.T) {

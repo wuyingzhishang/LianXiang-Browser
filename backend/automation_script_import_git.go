@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 func cloneAutomationGitRepository(repoURL string, ref string) (string, func(), error) {

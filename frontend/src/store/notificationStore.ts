@@ -152,7 +152,7 @@ export const useNotificationStore = create<NotificationState>()(persist((set) =>
 
   clearNotifications: () => set({ notifications: [] }),
 }), {
-  name: 'ant-browser-notifications',
+  name: 'lianxiang-browser-notifications',
   version: 1,
   migrate: (persistedState) => {
     const state = persistedState as { notifications?: unknown } | undefined

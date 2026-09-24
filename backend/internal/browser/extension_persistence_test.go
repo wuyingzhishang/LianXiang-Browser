@@ -1,8 +1,8 @@
 package browser
 
 import (
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/database"
 	"archive/zip"
 	"bytes"
 	"encoding/binary"

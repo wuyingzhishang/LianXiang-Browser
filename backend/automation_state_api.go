@@ -3,7 +3,7 @@ package backend
 import (
 	"strings"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func (a *App) GetAutomationState() map[string]interface{} {

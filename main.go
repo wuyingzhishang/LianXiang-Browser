@@ -1,13 +1,13 @@
 package main
 
 import (
-	"ant-chrome/backend"
-	"ant-chrome/internal/lifecycle"
-	"ant-chrome/internal/singleinstance"
-	"ant-chrome/internal/windowsizing"
 	"context"
 	"embed"
 	"encoding/json"
+	"lianxiang-browser/backend"
+	"lianxiang-browser/internal/lifecycle"
+	"lianxiang-browser/internal/singleinstance"
+	"lianxiang-browser/internal/windowsizing"
 	"log"
 	"os"
 	"path/filepath"
@@ -136,6 +136,22 @@ func (a *App) BackupListLocalBackups(directory string) ([]backend.BackupLocalHis
 	return a.App.BackupListLocalBackups(directory)
 }
 
+func (a *App) DataDirectoryGetInfo() backend.DataDirectoryInfo {
+	return a.App.DataDirectoryGetInfo()
+}
+
+func (a *App) DataDirectorySelectDirectory() backend.DataDirectorySelectResult {
+	return a.App.DataDirectorySelectDirectory()
+}
+
+func (a *App) DataDirectorySetCustom(directory string, useCustom bool) (backend.DataDirectoryInfo, error) {
+	return a.App.DataDirectorySetCustom(directory, useCustom)
+}
+
+func (a *App) DataDirectoryMigrate(options backend.DataDirectoryMigrateOptions) backend.DataDirectoryMigrateResult {
+	return a.App.DataDirectoryMigrate(options)
+}
+
 func main() {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -189,15 +205,55 @@ func main() {
 	if startupDebugEnabled {
 		log.Printf("应用根目录: %s (dev=%v)", appRoot, isDevMode)
 	}
+
+	// 尽早加载数据目录配置，在 EnsureRuntimeLayout 之前
+	if dataDirConfig, err := backend.LoadDataDirConfigForAppRoot(appRoot); err == nil {
+		if dataDirConfig.UseCustomDataDir && strings.TrimSpace(dataDirConfig.CustomDataDir) != "" {
+			customDataDir := backend.NormalizeCustomDataDir(appRoot, dataDirConfig.CustomDataDir)
+			backend.SetCustomDataDir(customDataDir)
+			if startupDebugEnabled {
+				log.Printf("使用自定义数据目录: %s", customDataDir)
+			}
+		}
+	} else {
+		log.Printf("加载数据目录配置失败: %v", err)
+	}
+
 	if err := backend.EnsureRuntimeLayout(appRoot); err != nil {
-		log.Printf("准备用户数据目录失败: %v", err)
 		lifecycle.Log(appRoot, "runtime_layout.error", map[string]interface{}{"error": err.Error()})
+		// A removable drive or a directory whose permissions changed must not
+		// make the desktop shortcut appear dead. Keep the saved choice for the
+		// settings page, but start against the stable default root so the user
+		// can repair or disable the selection from inside the app.
+		if strings.TrimSpace(backend.GetCustomDataDir()) != "" {
+			log.Printf("准备自定义用户数据目录失败，回退到默认目录: %v", err)
+			backend.SetCustomDataDir("")
+			if fallbackErr := backend.EnsureRuntimeLayout(appRoot); fallbackErr != nil {
+				log.Printf("准备默认用户数据目录失败: %v", fallbackErr)
+				lifecycle.Log(appRoot, "runtime_layout.fallback_error", map[string]interface{}{"error": fallbackErr.Error()})
+			}
+		} else {
+			log.Printf("准备用户数据目录失败: %v", err)
+		}
 	}
 	lifecycle.Log(appRoot, "process.start", map[string]interface{}{"dev": isDevMode})
 	singleInstance, primaryInstance, err := singleinstance.Acquire(appRoot)
 	if err != nil {
 		log.Printf("单实例检查失败: %v", err)
 		lifecycle.Log(appRoot, "single_instance.error", map[string]interface{}{"error": err.Error()})
+		if strings.TrimSpace(backend.GetCustomDataDir()) != "" {
+			// The selected directory can remain readable while becoming
+			// unwritable. Retry the lock in the stable default root so this
+			// failure is recoverable from the settings page.
+			backend.SetCustomDataDir("")
+			singleInstance, primaryInstance, err = singleinstance.Acquire(appRoot)
+			if err == nil {
+				log.Printf("自定义目录无法用于单实例锁，已回退到默认状态目录")
+			}
+		}
+		if err != nil {
+			return
+		}
 	}
 	lifecycle.Log(appRoot, "single_instance.checked", map[string]interface{}{"primary": primaryInstance})
 	if !primaryInstance {

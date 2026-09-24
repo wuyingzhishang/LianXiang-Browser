@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/automation"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 func automationSelectorProfileID(selector map[string]any) string {

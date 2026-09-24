@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func runtimeInstallNodeMode(auto config.AutomationConfig) string {

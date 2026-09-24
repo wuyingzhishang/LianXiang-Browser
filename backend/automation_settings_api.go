@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func (a *App) SaveAutomationSettings(enabled bool, headlessDefault bool) (map[string]interface{}, error) {

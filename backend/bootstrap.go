@@ -1,8 +1,8 @@
 package backend
 
 import (
-	appconfig "ant-chrome/backend/internal/config"
-	apptray "ant-chrome/backend/internal/tray"
+	appconfig "lianxiang-browser/backend/internal/config"
+	apptray "lianxiang-browser/backend/internal/tray"
 	"fmt"
 	"os"
 	"path/filepath"

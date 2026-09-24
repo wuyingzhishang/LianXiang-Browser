@@ -259,9 +259,32 @@ var migrations = []migration{
 			`UPDATE browser_extensions SET default_install = 0`,
 		},
 	},
+	{
+		version: 18,
+		desc:    "兼容二开v13/v14版本号碰撞：补齐实例会话恢复和内存限制字段",
+		// 二开版本将v13/v14用于书签表扩展字段，导致上游v13(restore_last_session)
+		// 和v14(memory_limit_mb)被schema_migrations表记录为已执行而实际未添加。
+		// 此版本在v18补齐，ALTER TABLE遇到列已存在时会被isColumnExistsError忽略，
+		// 对全新安装和已执行上游v13/v14的机器均幂等。
+		stmts: []string{
+			`ALTER TABLE browser_profiles ADD COLUMN restore_last_session TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE browser_profiles ADD COLUMN memory_limit_mb INTEGER NOT NULL DEFAULT 0`,
+		},
+	},
+	{
+		version: 19,
+		desc:    "书签表添加分组和禁用配置字段",
+		// 二开版本已在v13/v14为同名列建了schema；isColumnExistsError会静默忽略重复ALTER，
+		// 对全新安装和已有这些列的旧安装均幂等。
+		stmts: []string{
+			`ALTER TABLE browser_bookmarks ADD COLUMN folder TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE browser_bookmarks ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0`,
+			`ALTER TABLE browser_bookmarks ADD COLUMN disabled_profile_ids TEXT NOT NULL DEFAULT '[]'`,
+		},
+	},
 	// ── 新版本在此追加，格式：
 	// {
-	//     version: 4,
+	//     version: 20,
 	//     desc:    "描述本次变更",
 	//     stmts: []string{
 	//         `ALTER TABLE xxx ADD COLUMN yyy TEXT NOT NULL DEFAULT ''`,

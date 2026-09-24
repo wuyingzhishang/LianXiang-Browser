@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 func (a *App) automationScriptStore() *automation.ScriptStore {

@@ -3,9 +3,9 @@ package backend
 import (
 	"testing"
 
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/proxy"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/proxy"
 )
 
 func TestBrowserProxyBuildDiagnosticUsesConfiguredConnectorStack(t *testing.T) {

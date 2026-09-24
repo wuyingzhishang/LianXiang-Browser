@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/fsutil"
 	"fmt"
 	"os"
 	"path/filepath"

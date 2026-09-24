@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 	"database/sql"
 	"fmt"
 	"os"
@@ -130,8 +130,12 @@ FROM src.browser_groups s
 		},
 		{
 			name: "browser_bookmarks",
-			insertSafe: `INSERT INTO browser_bookmarks (name, url, sort_order)
-SELECT s.name, s.url, s.sort_order
+			insertSafe: `INSERT INTO browser_bookmarks (name, url, sort_order, open_on_start, folder, disabled, disabled_profile_ids)
+SELECT s.name, s.url, s.sort_order,
+       COALESCE(s.open_on_start, 0),
+       COALESCE(s.folder, ''),
+       COALESCE(s.disabled, 0),
+       COALESCE(s.disabled_profile_ids, '[]')
 FROM src.browser_bookmarks s
 WHERE NOT EXISTS (
   SELECT 1 FROM browser_bookmarks t WHERE lower(t.url) = lower(s.url)

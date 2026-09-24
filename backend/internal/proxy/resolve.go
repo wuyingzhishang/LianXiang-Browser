@@ -3,7 +3,7 @@ package proxy
 import (
 	"strings"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func resolveProxyConfig(proxyConfig string, proxies []config.BrowserProxy, proxyId string) string {

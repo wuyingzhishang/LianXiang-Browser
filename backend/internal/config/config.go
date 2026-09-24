@@ -154,8 +154,10 @@ type BackupScheduleConfig struct {
 }
 
 type AppConfig struct {
-	Name   string       `yaml:"name"`
-	Window WindowConfig `yaml:"window"`
+	Name            string       `yaml:"name"`
+	Window          WindowConfig `yaml:"window"`
+	CustomDataDir   string       `yaml:"custom_data_dir,omitempty"`
+	UseCustomDataDir bool        `yaml:"use_custom_data_dir,omitempty"`
 }
 
 type WindowConfig struct {
@@ -171,9 +173,12 @@ type RuntimeConfig struct {
 }
 
 type BrowserBookmark struct {
-	Name        string `yaml:"name" json:"name"`
-	URL         string `yaml:"url" json:"url"`
-	OpenOnStart bool   `yaml:"open_on_start,omitempty" json:"openOnStart"`
+	Name               string   `yaml:"name" json:"name"`
+	URL                string   `yaml:"url" json:"url"`
+	OpenOnStart        bool     `yaml:"open_on_start,omitempty" json:"openOnStart"`
+	Folder             string   `yaml:"folder,omitempty" json:"folder,omitempty"`
+	Disabled           bool     `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	DisabledProfileIDs []string `yaml:"disabled_profile_ids,omitempty" json:"disabledProfileIds,omitempty"`
 }
 
 type BrowserConfig struct {

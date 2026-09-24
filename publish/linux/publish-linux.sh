@@ -133,21 +133,21 @@ APP_ICON_SRC="$ROOT_DIR/build/appicon.png"
 APP_BIN="$ROOT_DIR/build/bin/ant-chrome"
 WAILS_CONFIG="$ROOT_DIR/wails.json"
 CHROME_README_SRC="$ROOT_DIR/chrome/README.md"
-APP_PACKAGE_NAME="ant-browser"
+APP_PACKAGE_NAME="lianxiang-browser"
 APP_BINARY_NAME="ant-chrome"
-APP_ICON_NAME="ant-browser"
-APP_DESKTOP_ID="ant-browser.desktop"
-APPSTREAM_ID="ant-browser"
-APP_NAME="Ant Browser"
+APP_ICON_NAME="lianxiang-browser"
+APP_DESKTOP_ID="lianxiang-browser.desktop"
+APPSTREAM_ID="lianxiang-browser"
+APP_NAME="链享浏览器"
 APP_SUMMARY="Multi-profile browser launcher with proxy-pool management"
-APP_MAINTAINER="Ant Chrome Team"
-APP_MAINTAINER_EMAIL="contact@antblack.dev"
-APP_HOMEPAGE="https://github.com/black-ant/Ant-Browser"
+APP_MAINTAINER="链享浏览器团队"
+APP_MAINTAINER_EMAIL="support@lianxiang-browser.local"
+APP_HOMEPAGE="https://github.com/wuyingzhishang/LianXiang-Browser"
 BUILD_DATE_UTC="$(date -u +%F)"
 ICON_SIZES=(16 24 32 48 64 128 256 512)
 
 echo "========================================"
-echo "  Ant Browser Linux Publish"
+echo "  链享浏览器 Linux Publish"
 echo "========================================"
 echo "Target : $TARGET"
 echo "Version: $VERSION"
@@ -227,11 +227,11 @@ if [[ -f "$CHROME_README_SRC" ]]; then
 fi
 
 mkdir -p "$OUTPUT_DIR"
-TAR_NAME="AntBrowser-${VERSION}-linux-${ARCH}.tar.gz"
+TAR_NAME="LianXiangBrowser-${VERSION}-linux-${ARCH}.tar.gz"
 tar -C "$APP_STAGE" -czf "$OUTPUT_DIR/$TAR_NAME" .
 
 PKG_ROOT="$DEB_STAGE/${APP_PACKAGE_NAME}_${VERSION}_${ARCH}"
-INSTALL_ROOT="$PKG_ROOT/opt/ant-browser"
+INSTALL_ROOT="$PKG_ROOT/opt/lianxiang-browser"
 DESKTOP_ROOT="$PKG_ROOT/usr/share/applications"
 ICON_THEME_ROOT="$PKG_ROOT/usr/share/icons/hicolor"
 PIXMAPS_ROOT="$PKG_ROOT/usr/share/pixmaps"
@@ -265,8 +265,8 @@ cat > "$DESKTOP_ROOT/$APP_DESKTOP_ID" <<EOF
 Version=1.0
 Name=${APP_NAME}
 Comment=${APP_SUMMARY}
-Exec=/opt/ant-browser/${APP_BINARY_NAME}
-TryExec=/opt/ant-browser/${APP_BINARY_NAME}
+Exec=/opt/lianxiang-browser/${APP_BINARY_NAME}
+TryExec=/opt/lianxiang-browser/${APP_BINARY_NAME}
 Icon=${APP_ICON_NAME}
 StartupWMClass=Ant-chrome
 Terminal=false
@@ -291,7 +291,7 @@ cat > "$METAINFO_ROOT/${APP_PACKAGE_NAME}.metainfo.xml" <<EOF
     <binary>${APP_BINARY_NAME}</binary>
   </provides>
   <description>
-    <p>Ant Browser manages isolated browser profiles, proxy binding, and local environment configuration for multi-account workflows.</p>
+    <p>链享浏览器 manages isolated browser profiles, proxy binding, and local environment configuration for multi-account workflows.</p>
     <p>The Debian package installs a launcher, theme icons, and runtime helpers for standard Linux desktop environments.</p>
   </description>
   <categories>
@@ -330,15 +330,15 @@ Installed-Size: ${INSTALLED_SIZE_KB}
 Depends: libc6 (>= 2.31), libgtk-3-0, libglib2.0-0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37
 Description: ${APP_NAME} desktop app
  Multi-profile browser launcher with proxy-pool management.
- Ant Browser manages isolated browser profiles, proxy binding, and
+ 链享浏览器 manages isolated browser profiles, proxy binding, and
  local environment configuration for multi-account workflows.
 EOF
 
 cat > "$PKG_ROOT/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
-ln -sf /opt/ant-browser/ant-chrome /usr/bin/ant-chrome
-chmod +x /opt/ant-browser/ant-chrome /opt/ant-browser/bin/xray /opt/ant-browser/bin/sing-box || true
+ln -sf /opt/lianxiang-browser/ant-chrome /usr/bin/ant-chrome
+chmod +x /opt/lianxiang-browser/ant-chrome /opt/lianxiang-browser/bin/xray /opt/lianxiang-browser/bin/sing-box || true
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
 fi

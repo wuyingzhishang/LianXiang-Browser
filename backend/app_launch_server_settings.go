@@ -5,8 +5,8 @@ import (
 	"net"
 	"strconv"
 
-	"ant-chrome/backend/internal/launchcode"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/launchcode"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func (a *App) SaveLaunchServerSettings(port int) (map[string]interface{}, error) {

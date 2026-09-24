@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/logger"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -305,6 +305,18 @@ func (a *App) prepareBrowserLaunchContext(input browserStartInput, profile *Brow
 		)
 	} else if terminated {
 		log.Warn("检测到无调试端口的残留浏览器进程，已结束并重新启动实例",
+			logger.F("profile_id", input.ProfileID),
+			logger.F("user_data_dir", userDataDir),
+		)
+	}
+	if removed, cleanupErr := clearStaleBrowserSingletonFiles(userDataDir); cleanupErr != nil {
+		log.Warn("清理残留浏览器单实例锁失败，继续尝试启动",
+			logger.F("profile_id", input.ProfileID),
+			logger.F("user_data_dir", userDataDir),
+			logger.F("error", cleanupErr.Error()),
+		)
+	} else if removed {
+		log.Warn("检测到残留浏览器单实例锁，已清理后重新启动实例",
 			logger.F("profile_id", input.ProfileID),
 			logger.F("user_data_dir", userDataDir),
 		)

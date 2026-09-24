@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // ─── TCP Ping 降级 ───

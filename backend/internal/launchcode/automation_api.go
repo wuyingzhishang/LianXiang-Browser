@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 const (

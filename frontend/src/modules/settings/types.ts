@@ -28,8 +28,8 @@ export interface AppSettings {
 }
 
 export const defaultSettings: AppSettings = {
-  appName: 'Ant Browser',
-  appDescription: '基于 Wails + React 的桌面应用',
+  appName: '链享浏览器',
+  appDescription: '面向多账号隔离、代理绑定和本地环境管理的桌面浏览器工具',
   theme: 'light',
   primaryColor: '#3B82F6',
   language: 'zh-CN',

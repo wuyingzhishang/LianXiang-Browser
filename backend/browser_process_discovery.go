@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -118,6 +119,40 @@ func terminateBrowserUserDataOrphans(userDataDir string, timeout time.Duration) 
 		return false, err
 	}
 	return true, nil
+}
+
+// clearStaleBrowserSingletonFiles removes Chromium's single-instance markers
+// only after the process query confirms that no browser still owns the profile.
+// A crashed or force-terminated browser can leave these markers behind; the
+// next launch then hands its command to the dead instance and exits before the
+// remote debugging endpoint becomes ready.
+func clearStaleBrowserSingletonFiles(userDataDir string) (bool, error) {
+	userDataDir = strings.TrimSpace(userDataDir)
+	if userDataDir == "" {
+		return false, nil
+	}
+
+	processes, err := findBrowserUserDataProcesses(userDataDir)
+	if err != nil {
+		return false, err
+	}
+	if len(processes) > 0 {
+		return false, nil
+	}
+
+	removed := false
+	for _, name := range []string{"SingletonLock", "SingletonCookie", "SingletonSocket"} {
+		path := filepath.Join(userDataDir, name)
+		err := os.Remove(path)
+		if err == nil {
+			removed = true
+			continue
+		}
+		if !os.IsNotExist(err) {
+			return removed, fmt.Errorf("删除残留浏览器锁文件 %s 失败: %w", path, err)
+		}
+	}
+	return removed, nil
 }
 
 func isBrowserChildProcessCommandLine(commandLine string) bool {

@@ -1,9 +1,9 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/backup"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/snapshot"
+	"lianxiang-browser/backend/internal/backup"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/snapshot"
 	"encoding/json"
 	"fmt"
 	"os"

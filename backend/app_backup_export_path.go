@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/backup"
+	"lianxiang-browser/backend/internal/backup"
 	"fmt"
 	"strings"
 	"time"

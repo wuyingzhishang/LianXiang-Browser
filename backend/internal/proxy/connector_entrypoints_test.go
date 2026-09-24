@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestBuildProxyDiagnosticUsesConfiguredConnectorStack(t *testing.T) {

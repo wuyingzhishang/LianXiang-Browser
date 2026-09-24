@@ -1,7 +1,7 @@
 package launchcode
 
 import (
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 	"net/http"
 	"sort"
 	"strings"

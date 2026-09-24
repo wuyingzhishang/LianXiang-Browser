@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/database"
 	"database/sql"
 	"fmt"
 	"os"

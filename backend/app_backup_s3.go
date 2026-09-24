@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/backup/channels/s3"
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/backup/channels/s3"
+	"lianxiang-browser/backend/internal/config"
 	"context"
 	"fmt"
 	"os"

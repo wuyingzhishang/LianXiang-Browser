@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 type runtimeNodePlan struct {

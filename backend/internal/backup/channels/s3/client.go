@@ -1,7 +1,7 @@
 package s3
 
 import (
-	"ant-chrome/backend/internal/backup/channels"
+	"lianxiang-browser/backend/internal/backup/channels"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"

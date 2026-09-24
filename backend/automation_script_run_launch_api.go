@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 const dualInstanceRuntimeDefaultTimeoutMs = 45000

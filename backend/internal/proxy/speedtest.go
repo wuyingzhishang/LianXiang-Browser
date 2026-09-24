@@ -15,8 +15,8 @@ import (
 	"github.com/metacubex/mihomo/common/utils"
 	C "github.com/metacubex/mihomo/constant"
 
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // ─── Clash 标准测速 URL ───

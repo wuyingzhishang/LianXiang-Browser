@@ -60,7 +60,7 @@ export interface ProfilePageLocalConfig {
 export const profilePageConfig: ProfilePageLocalConfig = {
   remoteAuthor: {
     // 留空时直接使用本地默认资料；需要远程作者页时再替换为真实地址。
-    // https://static.antblack.de/profile/author.json
+    // 需要远程作者页时再替换为二开项目自己的地址。
     // https://raw.githubusercontent.com/<user>/<repo>/main/author.json
     authorURL: '',
     timeoutMs: 1000,
@@ -72,9 +72,9 @@ export const profilePageConfig: ProfilePageLocalConfig = {
     bio: '热爱开源，专注于 Web 和桌面应用开发。致力于打造优雅、高效的开发工具和框架。',
     location: '中国',
     joinDate: '2020',
-    email: 'contact@antblack.dev',
-    website: 'http://blog.antblack.cn',
-    github: 'https://github.com/black-ant',
+    email: 'support@lianxiang-browser.local',
+    website: 'https://github.com/wuyingzhishang/LianXiang-Browser',
+    github: 'https://github.com/wuyingzhishang/LianXiang-Browser',
     skills: ['Go', 'React', 'TypeScript', 'Wails', 'Node.js', 'Docker'],
     channels: [
       {
@@ -87,8 +87,8 @@ export const profilePageConfig: ProfilePageLocalConfig = {
       {
         name: '个人博客',
         description: '独立站文章与项目归档',
-        detail: 'blog.antblack.cn',
-        href: 'http://blog.antblack.cn',
+        detail: 'github.com/wuyingzhishang/LianXiang-Browser',
+        href: 'https://github.com/wuyingzhishang/LianXiang-Browser',
         icon: 'globe',
       },
       {

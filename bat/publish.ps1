@@ -11,11 +11,19 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
 
+# Add local toolchain to PATH
+$localTools = Join-Path $repoRoot ".local-tools"
+$env:PATH = "$localTools\bin;$localTools\go\bin;$localTools\nsis;$env:PATH"
+Write-Host "Using toolchain from: $localTools"
+Write-Host ""
+
 $script:ResolvedVersion = ""
 $script:LinuxArch = ""
 $script:WindowsInstallerDone = $false
 $script:WindowsPortableDone = $false
+$script:WindowsBinaryDone = $false
 $script:LinuxDone = $false
+$script:ReleaseArtifacts = New-Object System.Collections.Generic.List[string]
 
 function Write-Section {
     param([string]$Text)
@@ -32,6 +40,12 @@ function Get-TrimmedText {
         return ""
     }
     return $Value.Trim()
+}
+
+function Read-Utf8Text {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
 function Assert-VersionValue {
@@ -58,7 +72,14 @@ function Invoke-NativeCommand {
         [string[]]$Arguments = @()
     )
 
-    & $FilePath @Arguments
+    $resolvedFilePath = $FilePath
+    if ($FilePath -eq "npm") {
+        $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+        if ($npmCommand) {
+            $resolvedFilePath = $npmCommand.Source
+        }
+    }
+    & $resolvedFilePath @Arguments
     if ($LASTEXITCODE -ne 0) {
         $argText = if ($Arguments.Count -gt 0) { " $($Arguments -join ' ')" } else { "" }
         throw "$FilePath$argText failed with exit code $LASTEXITCODE"
@@ -104,7 +125,7 @@ function Resolve-Version {
         throw "无法读取版本号：缺少 wails.json"
     }
 
-    $wailsConfig = Get-Content -LiteralPath $wailsConfigPath -Raw | ConvertFrom-Json
+    $wailsConfig = (Read-Utf8Text -Path $wailsConfigPath) | ConvertFrom-Json
     $resolvedVersion = Get-TrimmedText ([string]$wailsConfig.info.productVersion)
     if ($resolvedVersion -eq "") {
         throw "无法从 wails.json 读取版本号"
@@ -127,7 +148,7 @@ function Invoke-WithTemporaryWailsVersion {
         return
     }
 
-    $currentConfig = Get-Content -LiteralPath $wailsConfigPath -Raw | ConvertFrom-Json
+    $currentConfig = (Read-Utf8Text -Path $wailsConfigPath) | ConvertFrom-Json
     $currentVersion = Get-TrimmedText ([string]$currentConfig.info.productVersion)
     if ($currentVersion -eq $script:ResolvedVersion) {
         & $ScriptBlock
@@ -225,7 +246,7 @@ function Resolve-WindowsFormat {
 
     Write-Host "[2/3] 选择 Windows 输出格式..."
     Write-Host ""
-    Write-Host "  [I] 安装包（默认）"
+    Write-Host "  [I] 完整 Windows 发布集（默认：安装包 + 本地 EXE + 便携 ZIP + SHA-256）"
     Write-Host "  [Z] 便携 ZIP"
     Write-Host "  [B] 安装包 + 便携 ZIP"
     Write-Host ""
@@ -289,7 +310,8 @@ function Resolve-NsisPath {
 
 function Build-WindowsBinary {
     Write-Host "[Windows] 执行 Wails 构建..."
-    $binaryPath = Join-Path $repoRoot "build/bin/ant-chrome.exe"
+    $binaryPath = Join-Path $repoRoot "build/bin/lianxiang-browser.exe"
+    $rawBinaryPath = Join-Path $repoRoot "build/bin/lianxiang-browser"
     Assert-RequiredSourceFiles -Action "Windows packaging" -Paths @(
         "go.mod",
         "go.sum",
@@ -317,10 +339,69 @@ function Build-WindowsBinary {
         $env:GOPROXY = $previousGoProxy
     }
 
-    if (-not (Test-Path -LiteralPath $binaryPath -PathType Leaf)) {
-        throw "构建产物不存在: build\bin\ant-chrome.exe"
+    if (-not (Test-Path -LiteralPath $binaryPath -PathType Leaf) -and (Test-Path -LiteralPath $rawBinaryPath -PathType Leaf)) {
+        Move-Item -LiteralPath $rawBinaryPath -Destination $binaryPath -Force
+        Write-Host "✓ 已将 Wails 无扩展名产物规范化为 lianxiang-browser.exe"
     }
-    Write-Host "✓ 构建成功: build\bin\ant-chrome.exe"
+    if (-not (Test-Path -LiteralPath $binaryPath -PathType Leaf)) {
+        throw "构建产物不存在: build\bin\lianxiang-browser.exe（也未找到 build\bin\lianxiang-browser）"
+    }
+    Write-Host "✓ 构建成功: build\bin\lianxiang-browser.exe"
+    Write-Host ""
+}
+
+function Reset-PublishWorkspace {
+    foreach ($relativePath in @("publish/output", "publish/staging")) {
+        $path = Join-Path $repoRoot $relativePath
+        if (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Recurse -Force
+        }
+        New-Item -ItemType Directory -Path $path -Force | Out-Null
+    }
+    Write-Host "✓ 已清理旧发布产物和临时 staging"
+    Write-Host ""
+}
+
+function Add-ReleaseArtifact {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "发布产物不存在: $Path"
+    }
+    $resolved = (Resolve-Path -LiteralPath $Path).Path
+    if (-not $script:ReleaseArtifacts.Contains($resolved)) {
+        $script:ReleaseArtifacts.Add($resolved)
+    }
+}
+
+function Write-ReleaseChecksums {
+    $outputDir = Join-Path $repoRoot "publish/output"
+    $artifacts = @(Get-ChildItem -LiteralPath $outputDir -File -Force | Where-Object {
+        $_.Name -ne "SHA256SUMS.txt" -and $_.Extension -ne ".sha256"
+    } | Sort-Object Name)
+    if ($artifacts.Count -eq 0) {
+        throw "没有可写入 SHA-256 的发布产物"
+    }
+    $sumLines = New-Object System.Collections.Generic.List[string]
+    foreach ($artifact in $artifacts) {
+        $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact.FullName).Hash.ToLowerInvariant()
+        $name = $artifact.Name
+        $sumLines.Add("$hash  $name")
+        Write-Host "✓ SHA-256: $name"
+    }
+    Set-Content -LiteralPath (Join-Path $outputDir "SHA256SUMS.txt") -Value ($sumLines -join [Environment]::NewLine) -Encoding ascii
+    Write-Host "✓ SHA-256 汇总: publish\output\SHA256SUMS.txt"
+    Write-Host ""
+}
+
+function Publish-WindowsBinaryArtifact {
+    param([Parameter(Mandatory = $true)][string]$BinaryPath)
+    $outputDir = Join-Path $repoRoot "publish/output"
+    $name = "LianXiangBrowser-$script:ResolvedVersion-windows-amd64.exe"
+    $target = Join-Path $outputDir $name
+    Copy-Item -LiteralPath $BinaryPath -Destination $target -Force
+    Add-ReleaseArtifact -Path $target
+    $script:WindowsBinaryDone = $true
+    Write-Host "✓ Windows 本地 EXE: publish\output\$name"
     Write-Host ""
 }
 
@@ -336,7 +417,7 @@ function Assert-RuntimeHashes {
     }
 
     Write-Host "[Windows] 校验运行时哈希..."
-    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $manifest = (Read-Utf8Text -Path $manifestPath) | ConvertFrom-Json
     $entries = @($manifest.files | Where-Object { $_.targets -contains $Target })
     if ($entries.Count -eq 0) {
         throw "运行时清单中不存在目标平台: $Target"
@@ -539,7 +620,7 @@ function New-WindowsStaging {
 
     $stagingDir = Join-Path $repoRoot "publish/staging"
     $releaseConfig = Join-Path $repoRoot "publish/config.init.yaml"
-    $binaryPath = Join-Path $repoRoot "build/bin/ant-chrome.exe"
+    $binaryPath = Join-Path $repoRoot "build/bin/lianxiang-browser.exe"
     $binDir = Join-Path $repoRoot "bin"
     $chromeRoot = Join-Path $repoRoot "chrome"
 
@@ -548,11 +629,11 @@ function New-WindowsStaging {
     }
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
-    Copy-Item -LiteralPath $binaryPath -Destination (Join-Path $stagingDir "ant-chrome.exe") -Force
-    if (-not (Test-Path -LiteralPath (Join-Path $stagingDir "ant-chrome.exe") -PathType Leaf)) {
-        throw "staging 中缺少 ant-chrome.exe"
+    Copy-Item -LiteralPath $binaryPath -Destination (Join-Path $stagingDir "lianxiang-browser.exe") -Force
+    if (-not (Test-Path -LiteralPath (Join-Path $stagingDir "lianxiang-browser.exe") -PathType Leaf)) {
+        throw "staging 中缺少 lianxiang-browser.exe"
     }
-    Write-Host "✓ 复制 ant-chrome.exe"
+    Write-Host "✓ 复制 lianxiang-browser.exe"
 
     if (-not (Test-Path -LiteralPath $releaseConfig -PathType Leaf)) {
         throw "未找到发布配置模板: publish\config.init.yaml"
@@ -578,8 +659,8 @@ function New-WindowsStaging {
     $stagingDiagnosticsDir = Join-Path $stagingDir 'data\diagnostics'
     New-Item -ItemType Directory -Path $stagingDiagnosticsDir -Force | Out-Null
     foreach ($diagnosticsScript in @(
-        'ant-chrome-diagnostics-watcher.ps1',
-        'install-ant-chrome-diagnostics-watcher.ps1'
+        'lianxiang-browser-diagnostics-watcher.ps1',
+        'install-lianxiang-browser-diagnostics-watcher.ps1'
     )) {
         $diagnosticsSource = Join-Path $repoRoot (Join-Path 'tools' $diagnosticsScript)
         if (-not (Test-Path -LiteralPath $diagnosticsSource -PathType Leaf)) {
@@ -641,6 +722,7 @@ function Invoke-WindowsPackaging {
     }
     Invoke-NativeCommand -FilePath $MakensisPath -Arguments $nsisArguments
 
+    Add-ReleaseArtifact -Path (Join-Path $outputDir "LianXiangBrowser-Setup-$script:ResolvedVersion.exe")
     Write-Host "✓ Windows 安装包生成成功"
     Write-Host ""
 }
@@ -657,9 +739,9 @@ function New-WindowsPortableArchive {
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
 
-    $archiveName = "AntBrowser-$script:ResolvedVersion-windows-amd64-portable.zip"
+    $archiveName = "LianXiangBrowser-$script:ResolvedVersion-windows-amd64-portable.zip"
     $archivePath = Join-Path $outputDir $archiveName
-    $rootName = "AntBrowser-$script:ResolvedVersion-windows-amd64-portable"
+    $rootName = "LianXiangBrowser-$script:ResolvedVersion-windows-amd64-portable"
     if (Test-Path -LiteralPath $archivePath) {
         Remove-Item -LiteralPath $archivePath -Force
     }
@@ -716,6 +798,7 @@ function New-WindowsPortableArchive {
         throw "便携 ZIP 生成失败: $archivePath"
     }
 
+    Add-ReleaseArtifact -Path $archivePath
     $script:WindowsPortableDone = $true
     Write-Host "✓ Windows 便携包生成成功: publish\output\$archiveName"
     Write-Host ""
@@ -741,6 +824,9 @@ function Publish-Windows {
 
     Write-Host "[3/3] 开始 Windows 打包..."
     Write-Host "  输出格式: $Format"
+    if ($Format -eq "INSTALLER") {
+        Write-Host "  提示：INSTALLER 仅生成安装包；完整发行版请使用 -WindowsFormat BOTH"
+    }
     Write-Host ""
 
     $makensisPath = $null
@@ -749,6 +835,7 @@ function Publish-Windows {
     }
     Assert-RuntimeHashes -Target "windows-amd64"
     Build-WindowsBinary
+    Publish-WindowsBinaryArtifact -BinaryPath (Join-Path $repoRoot "build/bin/lianxiang-browser.exe")
 
     $stagingDir = $null
     try {
@@ -774,7 +861,7 @@ function Publish-Linux {
     Write-Host ""
 
     $linuxScript = Join-Path $repoRoot "publish/linux/publish-linux-docker.ps1"
-    $archOutFile = Join-Path $env:TEMP ("ant-browser-linux-arch-" + [guid]::NewGuid().ToString("N") + ".txt")
+    $archOutFile = Join-Path $env:TEMP ("lianxiang-browser-linux-arch-" + [guid]::NewGuid().ToString("N") + ".txt")
     if (Test-Path -LiteralPath $archOutFile) {
         Remove-Item -LiteralPath $archOutFile -Force
     }
@@ -799,7 +886,7 @@ function Publish-Linux {
 }
 
 try {
-    Write-Section "Ant Browser - 发布打包脚本"
+    Write-Section "链享浏览器 - 发布打包脚本"
     Write-Host ""
     Write-Host "当前工作目录: $repoRoot"
     Write-Host ""
@@ -810,6 +897,7 @@ try {
     $resolvedWindowsFormat = Resolve-WindowsFormat -InputFormat $WindowsFormat -PublishTarget $publishTarget -Interactive (-not $targetWasProvided)
 
     Invoke-WithTemporaryWailsVersion {
+        Reset-PublishWorkspace
         switch ($publishTarget) {
             "WINDOWS" {
                 Publish-Windows -Format $resolvedWindowsFormat
@@ -831,16 +919,22 @@ try {
     Write-Section "✓ 发布完成！"
     Write-Host ""
     if ($script:WindowsInstallerDone) {
-        Write-Host "Windows 安装包: publish\output\AntBrowser-Setup-$script:ResolvedVersion.exe"
+        Write-Host "Windows 安装包: publish\output\LianXiangBrowser-Setup-$script:ResolvedVersion.exe"
+    }
+    if ($script:WindowsBinaryDone) {
+        Write-Host "Windows 本地 EXE: publish\output\LianXiangBrowser-$script:ResolvedVersion-windows-amd64.exe"
     }
     if ($script:WindowsPortableDone) {
-        Write-Host "Windows 便携包: publish\output\AntBrowser-$script:ResolvedVersion-windows-amd64-portable.zip"
+        Write-Host "Windows 便携包: publish\output\LianXiangBrowser-$script:ResolvedVersion-windows-amd64-portable.zip"
     }
     if ($script:LinuxDone) {
         Write-Host "Linux 产物目录: publish\output\"
         if ($script:LinuxArch -ne "") {
             Write-Host "Linux 架构: $script:LinuxArch"
         }
+    }
+    if ($script:ReleaseArtifacts.Count -gt 0) {
+        Write-ReleaseChecksums
     }
     Write-Host ""
     Write-Host "提示：用户安装后可将旧的 data\ 目录粘贴到安装目录覆盖初始数据"

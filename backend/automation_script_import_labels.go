@@ -3,7 +3,7 @@ package backend
 import (
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 func buildAutomationImportSourceLabel(source automation.ScriptSource) string {

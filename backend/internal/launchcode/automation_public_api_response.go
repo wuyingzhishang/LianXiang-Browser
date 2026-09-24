@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"ant-chrome/backend/internal/automation"
+	"lianxiang-browser/backend/internal/automation"
 )
 
 func writeAutomationPublicHookResponse(w http.ResponseWriter, record automation.ScriptRecord, run *automation.ScriptRunRecord) {

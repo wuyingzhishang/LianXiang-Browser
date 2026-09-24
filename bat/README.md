@@ -83,7 +83,7 @@ FAQ：
 
 ### `build.bat`
 
-构建 `build\bin\ant-chrome.exe`。
+构建 `build\bin\lianxiang-browser.exe`。
 
 ```bat
 bat\build.bat
@@ -96,7 +96,7 @@ bat\build.bat
 
 ### `publish.bat`
 
-发布打包入口，启动后会提示选择：
+发布打包入口。每次发布先清理 `publish\output\` 和 `publish\staging\` 中的旧产物，再生成当前版本的 Windows EXE、NSIS 安装包、便携 ZIP，以及 SHA-256 校验文件。启动后会提示选择：
 
 - `W`：仅 Windows
 - `L`：仅 Linux（通过 Docker Desktop）
@@ -112,13 +112,14 @@ bat\publish.bat
 bat\publish.bat W
 bat\publish.bat L
 bat\publish.bat B
-bat\publish.bat W -Version 1.8.0
-bat\publish.bat B -Version 1.8.0
+bat\publish.bat W -Version 1.9.3
+bat\publish.bat B -Version 1.9.3
+bat\publish.bat both -Version 1.9.3
 ```
 
 说明：
 
-- `-Version 1.8.0` 会覆盖本次发布使用的版本号；发布其他版本时替换为目标版本。
+- `-Version 1.9.3` 会覆盖本次发布使用的版本号；发布其他版本时替换为目标版本。
 - Windows / Linux 包名、NSIS 安装包版本号，以及本次构建期间读取到的 `wails.json productVersion` 会统一使用该值。
 
 Windows 打包依赖 NSIS，默认查找顺序：
@@ -141,7 +142,7 @@ Windows 分支使用的项目路径：
 
 ```text
 输入：
-- build\bin\ant-chrome.exe
+- build\bin\lianxiang-browser.exe
 - publish\config.init.yaml
 - bin\xray.exe
 - bin\sing-box.exe
@@ -150,7 +151,10 @@ Windows 分支使用的项目路径：
 - publish\staging\
 
 输出：
-- publish\output\AntBrowser-Setup-<version>.exe
+- publish\output\LianXiangBrowser-Setup-<version>.exe
+- publish\output\LianXiangBrowser-<version>-windows-amd64.exe
+- publish\output\LianXiangBrowser-<version>-windows-amd64-portable.zip
+- 上述每个文件对应的 `.sha256` 和 `publish\output\SHA256SUMS.txt`
 ```
 
 说明：
@@ -162,8 +166,8 @@ Windows 分支使用的项目路径：
 Linux 分支会通过 Docker Desktop 调用：
 
 ```text
-docker build -f publish/linux/linux-builder.Dockerfile -t ant-browser-linux-builder:local publish/linux
-docker run --rm -v <repo>:/workspace -w /workspace ant-browser-linux-builder:local ^
+docker build -f publish/linux/linux-builder.Dockerfile -t lianxiang-browser-linux-builder:local publish/linux
+docker run --rm -v <repo>:/workspace -w /workspace lianxiang-browser-linux-builder:local ^
   bash -c "bash publish/linux/publish-linux.sh --arch <Docker当前架构>"
 ```
 
@@ -185,7 +189,17 @@ CI=1        -> 同样不 pause
 Windows 产物：
 
 ```text
-publish\output\AntBrowser-Setup-<version>.exe
+publish\output\LianXiangBrowser-Setup-<version>.exe
+publish\output\LianXiangBrowser-<version>-windows-amd64.exe
+publish\output\LianXiangBrowser-<version>-windows-amd64-portable.zip
+publish\output\SHA256SUMS.txt
+```
+
+校验示例：
+
+```powershell
+Get-FileHash .\publish\output\LianXiangBrowser-<version>-windows-amd64.exe -Algorithm SHA256
+Get-Content .\publish\output\SHA256SUMS.txt
 ```
 
 ### `recover-profiles.ps1`
@@ -195,19 +209,19 @@ publish\output\AntBrowser-Setup-<version>.exe
 默认只预览，不写数据库：
 
 ```powershell
-pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\Ant Browser'
+pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\链享浏览器'
 ```
 
 确认结果后再写回 `app.db`：
 
 ```powershell
-pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\Ant Browser' -Apply
+pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\链享浏览器' -Apply
 ```
 
 如果旧目录来自备份恢复，且怀疑存在跨内核残留状态，可同时为“风险目录”创建一份 `__repair_时间戳` 副本，再将新配置指向副本：
 
 ```powershell
-pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\Ant Browser' -Apply -RepairRisky
+pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\链享浏览器' -Apply -RepairRisky
 ```
 
 说明：
@@ -215,7 +229,7 @@ pwsh -File bat/recover-profiles.ps1 -AppRoot 'E:\software\Ant Browser' -Apply -R
 - 脚本会调用 `go run ./backend/cmd/profile-recover`
 - `-Apply` 模式会先在 `data\recovery-backups\` 下备份当前数据库文件
 - 默认不会删除旧目录，也不会主动清理登录态文件
-- 运行 `-Apply` 前应先关闭 Ant Browser，避免并发写库
+- 运行 `-Apply` 前应先关闭 链享浏览器，避免并发写库
 
 ## 备注
 

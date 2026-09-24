@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
 
 	xproxy "golang.org/x/net/proxy"
 )

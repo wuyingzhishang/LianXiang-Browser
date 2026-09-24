@@ -36,7 +36,7 @@ bash publish/mac/publish-mac.sh --arch amd64
 The version defaults to `wails.json`. Override it for a package-only build with:
 
 ```bash
-bash publish/mac/publish-mac.sh --arch arm64 --version 1.8.0
+bash publish/mac/publish-mac.sh --arch arm64 --version 1.8.1
 ```
 
 Available options:
@@ -48,8 +48,8 @@ Available options:
 Output files:
 
 ```text
-publish/output/AntBrowser-<version>-macos-<arch>.app
-publish/output/AntBrowser-<version>-macos-<arch>.zip
+publish/output/LianXiangBrowser-<version>-macos-<arch>.app
+publish/output/LianXiangBrowser-<version>-macos-<arch>.zip
 ```
 
 ## GitHub Actions
@@ -66,17 +66,17 @@ The optional `version` input overrides the package version for that run. CI vali
 The current assembly layout is intentionally simple:
 
 ```text
-Ant Browser.app/Contents/MacOS/ant-chrome
-Ant Browser.app/Contents/MacOS/bin/xray
-Ant Browser.app/Contents/MacOS/bin/sing-box
-Ant Browser.app/Contents/MacOS/config.yaml
-Ant Browser.app/Contents/MacOS/chrome/README.md
+链享浏览器.app/Contents/MacOS/ant-chrome
+链享浏览器.app/Contents/MacOS/bin/xray
+链享浏览器.app/Contents/MacOS/bin/sing-box
+链享浏览器.app/Contents/MacOS/config.yaml
+链享浏览器.app/Contents/MacOS/chrome/README.md
 ```
 
 When the application runs from an `.app` bundle, writable state is redirected to:
 
 ```text
-~/Library/Application Support/ant-browser/
+~/Library/Application Support/lianxiang-browser/
 ```
 
 Configuration, database, logs, browser cores, and profile data belong in the user state root. Proxy runtime binaries remain in the app bundle.
@@ -86,8 +86,8 @@ Configuration, database, logs, browser cores, and profile data belong in the use
 For a package downloaded or copied from another machine, macOS may apply quarantine metadata. For an internal test package only:
 
 ```bash
-xattr -dr com.apple.quarantine "AntBrowser-<version>-macos-<arch>.app"
-open "AntBrowser-<version>-macos-<arch>.app"
+xattr -dr com.apple.quarantine "LianXiangBrowser-<version>-macos-<arch>.app"
+open "LianXiangBrowser-<version>-macos-<arch>.app"
 ```
 
 Unsigned builds are for internal testing. Removing quarantine is not a substitute for signing or notarization.

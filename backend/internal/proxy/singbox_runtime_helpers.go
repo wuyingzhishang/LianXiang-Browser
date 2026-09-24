@@ -1,8 +1,8 @@
 package proxy
 
 import (
-	"ant-chrome/backend/internal/apppath"
-	"ant-chrome/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/apppath"
+	"lianxiang-browser/backend/internal/fsutil"
 	"encoding/json"
 	"fmt"
 	"os"

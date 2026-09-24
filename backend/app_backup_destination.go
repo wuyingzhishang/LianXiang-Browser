@@ -1,10 +1,10 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/backup/channels"
-	"ant-chrome/backend/internal/backup/channels/openlist"
-	"ant-chrome/backend/internal/backup/channels/s3"
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/backup/channels"
+	"lianxiang-browser/backend/internal/backup/channels/openlist"
+	"lianxiang-browser/backend/internal/backup/channels/s3"
+	"lianxiang-browser/backend/internal/config"
 	"encoding/json"
 	"fmt"
 	"os"

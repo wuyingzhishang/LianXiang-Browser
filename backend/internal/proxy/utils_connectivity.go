@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 // TestConnectivity 通过 TCP 握手测试代理服务器的可达性和延迟

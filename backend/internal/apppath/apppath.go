@@ -1,8 +1,9 @@
 package apppath
 
 import (
-	"ant-chrome/backend/internal/fsutil"
+	"fmt"
 	"io"
+	"lianxiang-browser/backend/internal/fsutil"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -10,15 +11,33 @@ import (
 	"sync"
 )
 
-const appStateDirName = "ant-browser"
+const appStateDirName = "lianxiang-browser"
 
 type roots struct {
-	installRoot string
-	stateRoot   string
-	detached    bool
+	installRoot   string
+	stateRoot     string
+	customDataDir string
+	detached      bool
 }
 
 var rootsCache sync.Map
+var customDataDirOverride string
+var customDataDirMutex sync.RWMutex
+
+// SetCustomDataDir 设置全局自定义数据目录
+func SetCustomDataDir(path string) {
+	customDataDirMutex.Lock()
+	defer customDataDirMutex.Unlock()
+	customDataDirOverride = strings.TrimSpace(path)
+	rootsCache = sync.Map{}
+}
+
+// GetCustomDataDir 获取全局自定义数据目录
+func GetCustomDataDir() string {
+	customDataDirMutex.RLock()
+	defer customDataDirMutex.RUnlock()
+	return customDataDirOverride
+}
 
 // InstallRoot 返回应用安装根目录的绝对路径。
 func InstallRoot(appRoot string) string {
@@ -27,6 +46,24 @@ func InstallRoot(appRoot string) string {
 
 // StateRoot 返回应用可写状态目录的绝对路径。
 func StateRoot(appRoot string) string {
+	customDataDirMutex.RLock()
+	custom := customDataDirOverride
+	customDataDirMutex.RUnlock()
+
+	if custom != "" {
+		if abs, err := filepath.Abs(custom); err == nil {
+			return abs
+		}
+		return filepath.Clean(custom)
+	}
+
+	return detect(appRoot).stateRoot
+}
+
+// DefaultStateRoot 返回未启用自定义目录时的稳定状态目录。
+// 数据目录选择配置必须保存在这里，否则启用自定义目录后会失去读取配置
+// 所需的入口，下一次启动也就无法恢复同一个目录。
+func DefaultStateRoot(appRoot string) string {
 	return detect(appRoot).stateRoot
 }
 
@@ -36,7 +73,7 @@ func IsDetached(appRoot string) bool {
 }
 
 // Resolve 将相对路径解析到安装目录或用户状态目录。
-// 已安装的 Linux / macOS 应用在启用 detached 模式后，除 bin/ 外的相对路径都会落到用户可写目录。
+// 已安装到受保护目录的应用在启用 detached 模式后，除 bin/ 外的相对路径都会落到用户可写目录。
 func Resolve(appRoot, p string) string {
 	return resolveForOS(appRoot, p, goruntime.GOOS)
 }
@@ -48,6 +85,20 @@ func resolveForOS(appRoot, p, goos string) string {
 	}
 	if filepath.IsAbs(p) {
 		return filepath.Clean(p)
+	}
+
+	customDataDirMutex.RLock()
+	custom := customDataDirOverride
+	customDataDirMutex.RUnlock()
+
+	if custom != "" && useStateRoot(p) {
+		var base string
+		if abs, err := filepath.Abs(custom); err == nil {
+			base = abs
+		} else {
+			base = filepath.Clean(custom)
+		}
+		return filepath.Join(base, p)
 	}
 
 	root := detectForOS(appRoot, goos)
@@ -66,6 +117,66 @@ func EnsureWritableLayout(appRoot string) error {
 
 func ensureWritableLayoutForOS(appRoot, goos string) error {
 	root := detectForOS(appRoot, goos)
+	customDataDirMutex.RLock()
+	custom := strings.TrimSpace(customDataDirOverride)
+	customDataDirMutex.RUnlock()
+	if custom != "" {
+		customRoot, err := filepath.Abs(custom)
+		if err != nil {
+			customRoot = filepath.Clean(custom)
+		}
+		if err := os.MkdirAll(customRoot, 0755); err != nil {
+			return err
+		}
+		// MkdirAll succeeds for an existing directory even when the current
+		// process cannot write to it. SQLite needs write access to the data
+		// directory (in particular to create/update the WAL and SHM files), so
+		// reject the selection before startup opens the database. main.go will
+		// then fall back to the stable default state root.
+		if !dirWritable(customRoot) {
+			return fmt.Errorf("自定义数据目录不可写: %s", customRoot)
+		}
+		dataDir := filepath.Join(customRoot, "data")
+		if err := os.MkdirAll(dataDir, 0755); err != nil {
+			return err
+		}
+		if !dirWritable(dataDir) {
+			return fmt.Errorf("自定义数据目录不可写: %s", dataDir)
+		}
+		if filepath.Clean(customRoot) == filepath.Clean(root.stateRoot) {
+			return nil
+		}
+
+		// 自定义目录可能是在旧版本中只保存了开关，或用户点击保存后
+		// 尚未完成迁移。启动时仅补齐目标中不存在的文件，避免覆盖用户
+		// 已有数据，同时兼容安装目录和旧默认状态目录中的数据。
+		for _, dir := range []string{"data", "chrome"} {
+			targetDir := filepath.Join(customRoot, dir)
+			for _, sourceDir := range []string{
+				filepath.Join(root.stateRoot, dir),
+				filepath.Join(root.installRoot, dir),
+			} {
+				// A user can select an existing install data directory. In that
+				// case the destination would be nested inside the source and a
+				// recursive copy could keep discovering its own output.
+				if pathEqualOrWithin(targetDir, sourceDir) {
+					continue
+				}
+				if err := copyDirIfMissing(sourceDir, targetDir); err != nil {
+					return err
+				}
+			}
+		}
+		for _, file := range []string{"config.yaml", "proxies.yaml", "backup.local.yaml"} {
+			if err := copyFileIfMissing(filepath.Join(root.stateRoot, file), filepath.Join(customRoot, file)); err != nil {
+				return err
+			}
+			if err := copyFileIfMissing(filepath.Join(root.installRoot, file), filepath.Join(customRoot, file)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	if !root.detached {
 		return nil
 	}
@@ -73,7 +184,13 @@ func ensureWritableLayoutForOS(appRoot, goos string) error {
 	if err := os.MkdirAll(root.stateRoot, 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(root.stateRoot, "data"), 0755); err != nil {
+	// The first detached launch may already have created state/data before the
+	// application database is initialized. Merge the packaged data directory
+	// afterward so that an existing install keeps its profiles and app.db.
+	if err := copyDirIfMissing(
+		filepath.Join(root.installRoot, "data"),
+		filepath.Join(root.stateRoot, "data"),
+	); err != nil {
 		return err
 	}
 
@@ -133,6 +250,13 @@ func normalizeGOOS(goos string) string {
 
 func shouldDetachStateRoot(goos, installRoot string) bool {
 	switch normalizeGOOS(goos) {
+	case "windows":
+		// The NSIS installer uses %ProgramFiles% by default. That directory can
+		// be written by the elevated installer, but not by the normal user who
+		// starts the shortcut later. Decide from the install location rather than
+		// the current token so the first and subsequent launches share one state
+		// root instead of splitting data or failing on the instance lock.
+		return isWindowsProtectedInstall(installRoot)
 	case "linux":
 		return !dirWritable(installRoot)
 	case "darwin":
@@ -140,6 +264,37 @@ func shouldDetachStateRoot(goos, installRoot string) bool {
 	default:
 		return false
 	}
+}
+
+func isWindowsProtectedInstall(installRoot string) bool {
+	for _, candidate := range []string{
+		os.Getenv("ProgramFiles"),
+		os.Getenv("ProgramFiles(x86)"),
+		os.Getenv("ProgramW6432"),
+	} {
+		candidate = strings.TrimSpace(candidate)
+		if candidate != "" && pathEqualOrWithin(installRoot, candidate) {
+			return true
+		}
+	}
+
+	// Program Files can be relocated to another volume. In that case the
+	// environment variables above still commonly point at the system drive,
+	// while the installer may use a path such as D:\\Program Files\\链享浏览器.
+	// Keep the detection aligned with Windows' protected-directory convention
+	// so the first elevated launch and later normal launches share the same
+	// user-writable state root.
+	clean := strings.TrimSuffix(filepath.ToSlash(filepath.Clean(installRoot)), "/")
+	// Normalize both separators so this decision remains deterministic in
+	// tests that pass Windows paths while running on a non-Windows host.
+	clean = strings.ReplaceAll(clean, "\\", "/")
+	for _, segment := range strings.Split(clean, "/") {
+		switch strings.ToLower(strings.TrimSpace(segment)) {
+		case "program files", "program files (x86)":
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeRoot(appRoot string) string {
@@ -160,6 +315,13 @@ func normalizeRoot(appRoot string) string {
 
 func userStateRootForOS(goos, fallback string) string {
 	switch normalizeGOOS(goos) {
+	case "windows":
+		if base := strings.TrimSpace(os.Getenv("LOCALAPPDATA")); base != "" {
+			return filepath.Join(base, "链享浏览器")
+		}
+		if base, err := os.UserConfigDir(); err == nil && strings.TrimSpace(base) != "" {
+			return filepath.Join(base, "链享浏览器")
+		}
 	case "linux":
 		if base := strings.TrimSpace(os.Getenv("XDG_DATA_HOME")); base != "" {
 			return filepath.Join(base, appStateDirName)
@@ -195,6 +357,9 @@ func isMacAppBundleRoot(dir string) bool {
 }
 
 func dirWritable(dir string) bool {
+	if strings.TrimSpace(dir) == "" {
+		return false
+	}
 	file, err := os.CreateTemp(dir, ".ant-browser-write-test-*")
 	if err != nil {
 		return false
@@ -211,6 +376,20 @@ func useStateRoot(p string) bool {
 		return false
 	}
 	return clean != "bin" && !strings.HasPrefix(clean, "bin/")
+}
+
+func pathEqualOrWithin(path, root string) bool {
+	pathAbs, pathErr := filepath.Abs(path)
+	rootAbs, rootErr := filepath.Abs(root)
+	if pathErr != nil || rootErr != nil {
+		pathAbs = filepath.Clean(path)
+		rootAbs = filepath.Clean(root)
+	}
+	rel, err := filepath.Rel(rootAbs, pathAbs)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 func copyFileIfMissing(src, dst string) error {
@@ -235,12 +414,6 @@ func copyFileIfMissing(src, dst string) error {
 }
 
 func copyDirIfMissing(src, dst string) error {
-	if _, err := os.Stat(dst); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
 	info, err := os.Stat(src)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -250,6 +423,13 @@ func copyDirIfMissing(src, dst string) error {
 	}
 	if !info.IsDir() {
 		return nil
+	}
+	if dstInfo, err := os.Stat(dst); err == nil {
+		if !dstInfo.IsDir() {
+			return fmt.Errorf("目标路径不是目录: %s", dst)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
 	}
 
 	return filepath.Walk(src, func(path string, info os.FileInfo, walkErr error) error {
@@ -267,6 +447,11 @@ func copyDirIfMissing(src, dst string) error {
 		if info.IsDir() {
 			dirMode := info.Mode().Perm() | 0700
 			return os.MkdirAll(target, dirMode)
+		}
+		if _, err := os.Stat(target); err == nil {
+			return nil
+		} else if !os.IsNotExist(err) {
+			return err
 		}
 		return copyFile(path, target, info.Mode().Perm())
 	})

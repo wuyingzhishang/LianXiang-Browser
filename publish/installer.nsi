@@ -1,41 +1,47 @@
-﻿; Ant Browser NSIS Installer Script
-; Usage: makensis /DVERSION=1.4.0 /DSTAGINGDIR=C:\path\to\staging installer.nsi
+﻿; 链享浏览器 NSIS Installer Script
+; Usage: makensis /DVERSION=1.9.3 /DSTAGINGDIR=C:\path\to\staging installer.nsi
 
 Unicode True
 
 !ifndef VERSION
-  !define VERSION "1.4.0"
+  !define VERSION "1.9.3"
 !endif
 !ifndef STAGINGDIR
   !define STAGINGDIR "..\publish\staging"
 !endif
 
-!define PRODUCT_NAME    "Ant Browser"
-!define PRODUCT_EXE     "ant-chrome.exe"
-!define PRODUCT_ICON    "AntBrowser.ico"
-!define UNINSTALL_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\AntBrowser"
-!define INSTALL_DIR     "$PROGRAMFILES64\Ant Browser"
+!define PRODUCT_NAME    "链享浏览器"
+!define PRODUCT_EXE     "lianxiang-browser.exe"
+!define PRODUCT_ICON    "LianXiangBrowser.ico"
+!define UNINSTALL_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\LianXiangBrowser"
+!define INSTALL_DIR     "$PROGRAMFILES64\链享浏览器"
 !define POWERSHELL_EXE  "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 
 !macro WriteCloseProcessScript HANDLE
-  FileWrite ${HANDLE} "param([string]$$InstallDir, [string]$$ExcludePath)$\r$\n"
+  FileWrite ${HANDLE} "param([string]$$InstallDir, [string]$$ExcludePath, [switch]$$Force)$\r$\n"
   FileWrite ${HANDLE} "$$ErrorActionPreference = 'SilentlyContinue'$\r$\n"
   FileWrite ${HANDLE} "if ([string]::IsNullOrWhiteSpace($$InstallDir) -or -not (Test-Path -LiteralPath $$InstallDir)) { exit 0 }$\r$\n"
   FileWrite ${HANDLE} "$$root = [System.IO.Path]::GetFullPath($$InstallDir).TrimEnd('\') + '\'$\r$\n"
   FileWrite ${HANDLE} "$$exclude = ''$\r$\n"
   FileWrite ${HANDLE} "if (-not [string]::IsNullOrWhiteSpace($$ExcludePath)) { $$exclude = [System.IO.Path]::GetFullPath($$ExcludePath) }$\r$\n"
-  FileWrite ${HANDLE} "function Get-AntBrowserProcesses {$\r$\n"
+  FileWrite ${HANDLE} "function Get-LianXiangBrowserProcesses {$\r$\n"
   FileWrite ${HANDLE} "  @(Get-CimInstance Win32_Process | Where-Object {$\r$\n"
   FileWrite ${HANDLE} "    $$_.ExecutablePath -and $$_.ExecutablePath.StartsWith($$root, [System.StringComparison]::OrdinalIgnoreCase) -and ($$exclude -eq '' -or -not $$_.ExecutablePath.Equals($$exclude, [System.StringComparison]::OrdinalIgnoreCase))$\r$\n"
   FileWrite ${HANDLE} "  })$\r$\n"
   FileWrite ${HANDLE} "}$\r$\n"
-  FileWrite ${HANDLE} "$$procs = @(Get-AntBrowserProcesses)$\r$\n"
+  FileWrite ${HANDLE} "$$procs = @(Get-LianXiangBrowserProcesses)$\r$\n"
   FileWrite ${HANDLE} "if (-not $$procs -or $$procs.Count -eq 0) { exit 0 }$\r$\n"
   FileWrite ${HANDLE} "$$names = ($$procs | ForEach-Object { $$_.Name + '#' + $$_.ProcessId }) -join ', '$\r$\n"
   FileWrite ${HANDLE} "Write-Host ('running: ' + $$names)$\r$\n"
+  FileWrite ${HANDLE} "if ($$Force) {$\r$\n"
+  FileWrite ${HANDLE} "  foreach ($$p in $$procs) { try { Stop-Process -Id $$p.ProcessId -Force -ErrorAction Stop } catch {} }$\r$\n"
+  FileWrite ${HANDLE} "  Start-Sleep -Milliseconds 500$\r$\n"
+  FileWrite ${HANDLE} "  $$left = @(Get-LianXiangBrowserProcesses)$\r$\n"
+  FileWrite ${HANDLE} "  if (-not $$left -or $$left.Count -eq 0) { exit 0 }$\r$\n"
+  FileWrite ${HANDLE} "}$\r$\n"
   FileWrite ${HANDLE} "exit 1$\r$\n"
   FileWrite ${HANDLE} "exit 0$\r$\n"
 !macroend
@@ -55,13 +61,19 @@ retry_powershell:
 
   DetailPrint "检查安装目录中的运行进程: $INSTDIR"
   ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$0" -InstallDir "$INSTDIR" -ExcludePath ""' $2
-  Delete $0
 
   ${If} $2 == 0
     Goto done
   ${EndIf}
 
-  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "检测到安装目录中仍有运行进程。$\r$\n$\r$\n目录：$INSTDIR$\r$\n$\r$\n请先从窗口或托盘菜单正常退出应用，再点击“重试”重新检查；点击“取消”将终止本次安装。" IDRETRY retry_powershell IDCANCEL install_abort
+  MessageBox MB_YESNO|MB_ICONEXCLAMATION "检测到安装目录中仍有运行进程。$\r$\n$\r$\n目录：$INSTDIR$\r$\n$\r$\n点击“是”结束这些进程并继续安装；点击“否”先从窗口或托盘菜单正常退出应用后重新检查。" IDYES force_powershell IDNO retry_powershell
+
+force_powershell:
+  ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$0" -InstallDir "$INSTDIR" -ExcludePath "" -Force' $2
+  ${If} $2 == 0
+    Goto done
+  ${EndIf}
+  MessageBox MB_RETRYCANCEL|MB_ICONSTOP "仍有进程无法结束。请重启 Windows 或手动关闭相关进程后重试。" IDRETRY retry_powershell IDCANCEL install_abort
 
 install_abort:
   Abort "安装已取消：安装目录中的旧进程仍未退出。"
@@ -71,6 +83,7 @@ fallback_taskkill:
   Abort "安装已取消：无法安全检查安装目录中的运行进程。"
 
 done:
+  Delete $0
 FunctionEnd
 
 Function un.CloseInstalledProcesses
@@ -88,13 +101,19 @@ retry_powershell:
 
   DetailPrint "检查安装目录中的运行进程: $INSTDIR"
   ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$0" -InstallDir "$INSTDIR" -ExcludePath "$INSTDIR\Uninstall.exe"' $2
-  Delete $0
 
   ${If} $2 == 0
     Goto done
   ${EndIf}
 
-  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "检测到安装目录中仍有运行进程。$\r$\n$\r$\n目录：$INSTDIR$\r$\n$\r$\n请先从窗口或托盘菜单正常退出应用，再点击“重试”重新检查；点击“取消”将终止本次卸载。" IDRETRY retry_powershell IDCANCEL uninstall_abort
+  MessageBox MB_YESNO|MB_ICONEXCLAMATION "检测到安装目录中仍有运行进程。$\r$\n$\r$\n目录：$INSTDIR$\r$\n$\r$\n点击“是”结束这些进程并继续卸载；点击“否”先从窗口或托盘菜单正常退出应用后重新检查。" IDYES force_powershell IDNO retry_powershell
+
+force_powershell:
+  ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$0" -InstallDir "$INSTDIR" -ExcludePath "$INSTDIR\Uninstall.exe" -Force' $2
+  ${If} $2 == 0
+    Goto done
+  ${EndIf}
+  MessageBox MB_RETRYCANCEL|MB_ICONSTOP "仍有进程无法结束。请重启 Windows 或手动关闭相关进程后重试。" IDRETRY retry_powershell IDCANCEL uninstall_abort
 
 uninstall_abort:
   Abort "卸载已取消：安装目录中的旧进程仍未退出。"
@@ -104,12 +123,13 @@ fallback_taskkill:
   Abort "卸载已取消：无法安全检查安装目录中的运行进程。"
 
 done:
+  Delete $0
 FunctionEnd
 
 Function RegisterDiagnosticsWatcher
-  IfFileExists "$INSTDIR\data\diagnostics\install-ant-chrome-diagnostics-watcher.ps1" 0 done
+  IfFileExists "$INSTDIR\data\diagnostics\install-lianxiang-browser-diagnostics-watcher.ps1" 0 done
   DetailPrint "Registering read-only diagnostics watcher"
-  ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\data\diagnostics\install-ant-chrome-diagnostics-watcher.ps1" -InstallDir "$INSTDIR"' $0
+  ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\data\diagnostics\install-lianxiang-browser-diagnostics-watcher.ps1" -InstallDir "$INSTDIR"' $0
   ${If} $0 == 0
     DetailPrint "Diagnostics watcher registered"
   ${Else}
@@ -119,9 +139,9 @@ done:
 FunctionEnd
 
 Function un.UnregisterDiagnosticsWatcher
-  IfFileExists "$INSTDIR\data\diagnostics\install-ant-chrome-diagnostics-watcher.ps1" 0 done
+  IfFileExists "$INSTDIR\data\diagnostics\install-lianxiang-browser-diagnostics-watcher.ps1" 0 done
   DetailPrint "Removing read-only diagnostics watcher"
-  ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\data\diagnostics\install-ant-chrome-diagnostics-watcher.ps1" -InstallDir "$INSTDIR" -Uninstall' $0
+  ExecWait '"${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\data\diagnostics\install-lianxiang-browser-diagnostics-watcher.ps1" -InstallDir "$INSTDIR" -Uninstall' $0
 done:
 FunctionEnd
 
@@ -212,7 +232,7 @@ Function WarnInstallDir
   Return
 
 warn_dir:
-  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL|MB_DEFBUTTON2 "不建议安装到 C 盘、Program Files 或其他受权限保护的目录。$\r$\n$\r$\nAnt Browser 会在安装目录写入 data、浏览器实例和运行时文件；普通权限运行时可能写入失败，导致再次启动闪退或浏览器实例启动失败。$\r$\n$\r$\n建议改为非 C 盘可写目录，例如 D:\software\Ant Browser 或 E:\software\Ant Browser。$\r$\n$\r$\n点击“确定”继续安装到当前目录，点击“取消”返回修改安装路径。" IDOK continue_install IDCANCEL cancel_install
+  MessageBox MB_ICONINFORMATION|MB_OKCANCEL|MB_DEFBUTTON1 "当前目录位于 Windows 受保护路径。$\r$\n$\r$\n链享浏览器会自动将运行数据和单实例状态保存到当前用户可写目录；已有安装路径和用户数据无需迁移。$\r$\n$\r$\n点击“确定”继续安装，点击“取消”返回修改安装路径。" IDOK continue_install IDCANCEL cancel_install
 
 continue_install:
   Return
@@ -222,7 +242,7 @@ cancel_install:
 FunctionEnd
 
 Name "${PRODUCT_NAME} ${VERSION}"
-OutFile "..\publish\output\AntBrowser-Setup-${VERSION}.exe"
+OutFile "..\publish\output\LianXiangBrowser-Setup-${VERSION}.exe"
 InstallDir "${INSTALL_DIR}"
 InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
@@ -236,15 +256,15 @@ RequestExecutionLevel admin
 !define MUI_UNICON "..\build\windows\icon.ico"
 
 !insertmacro MUI_PAGE_WELCOME
-!define MUI_DIRECTORYPAGE_TEXT_TOP "请选择 Ant Browser 的安装目录。建议安装到非 C 盘的可写目录，例如 D:\software\Ant Browser 或 E:\software\Ant Browser；不要安装到 C 盘、Program Files 或其他受权限保护的目录。"
-!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "安装目录（建议非 C 盘）"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "请选择 链享浏览器 的安装目录。可以继续使用已有安装目录；安装到 Program Files 等受保护目录时，运行数据和单实例状态会保存到用户可写状态目录。"
+!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "安装目录"
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE WarnInstallDir
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_COMPONENTSPAGE_SMALLDESC
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT "Launch Ant Browser"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch 链享浏览器"
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
@@ -252,7 +272,7 @@ RequestExecutionLevel admin
 
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
-Section "Ant Browser (required)" SecMain
+Section "链享浏览器 (required)" SecMain
   SectionIn RO
   Call CloseInstalledProcesses
   Call PreserveLegacyBackupLocalConfig
@@ -276,7 +296,7 @@ Section "Ant Browser (required)" SecMain
   SetOutPath "$INSTDIR"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName"     "${PRODUCT_NAME}"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion"  "${VERSION}"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher"       "Ant Chrome Team"
+  WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher"       "链享浏览器团队"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "UninstallString" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayIcon"     "$INSTDIR\${PRODUCT_ICON}"
@@ -301,7 +321,7 @@ Section /o "Desktop Shortcut" SecDesktop
 SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecMain}    "Ant Browser main program and default config (required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecMain}    "链享浏览器主程序和默认配置（必需）"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecRuntime} "xray and sing-box proxy tools (vless/vmess/hysteria2)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Create a shortcut on the desktop"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END

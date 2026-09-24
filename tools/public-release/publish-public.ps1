@@ -69,8 +69,8 @@ if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction Sile
     $PSNativeCommandUseErrorActionPreference = $false
 }
 
-$defaultCommitterName = "Ant Browser Release Bot"
-$defaultCommitterEmail = "release-bot@ant-browser.local"
+$defaultCommitterName = "链享浏览器 Release Bot"
+$defaultCommitterEmail = "release-bot@lianxiang-browser.local"
 
 function Get-TrimmedText {
     param([AllowNull()][string]$Value)

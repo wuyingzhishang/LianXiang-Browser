@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 	"os/exec"
 	"sync"
 	"time"

@@ -1,7 +1,7 @@
 package openlist
 
 import (
-	"ant-chrome/backend/internal/backup/channels"
+	"lianxiang-browser/backend/internal/backup/channels"
 	"bytes"
 	"context"
 	"encoding/json"

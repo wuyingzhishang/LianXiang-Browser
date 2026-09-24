@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/snapshot"
+	"lianxiang-browser/backend/internal/snapshot"
 	"encoding/json"
 	"fmt"
 	"os"

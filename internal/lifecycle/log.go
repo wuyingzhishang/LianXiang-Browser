@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"ant-chrome/backend"
+	"lianxiang-browser/backend"
 )
 
 var lifecycleLogMu sync.Mutex

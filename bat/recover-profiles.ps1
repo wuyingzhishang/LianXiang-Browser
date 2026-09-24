@@ -47,7 +47,7 @@ Write-Host "RepoRoot: $repoRoot"
 Write-Host "AppRoot:  $resolvedAppRoot"
 if ($Apply) {
     Write-Host "Mode:     apply"
-    Write-Host "Notice:   Close Ant Browser before apply mode."
+    Write-Host "Notice:   Close 链享浏览器 before apply mode."
 } else {
     Write-Host "Mode:     preview"
 }

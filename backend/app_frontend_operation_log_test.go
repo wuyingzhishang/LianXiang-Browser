@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func TestFrontendOperationLogHonorsDebugLevel(t *testing.T) {

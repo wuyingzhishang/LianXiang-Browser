@@ -1,8 +1,8 @@
 package proxy
 
 import (
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
 	"fmt"
 	"os"
 	"os/exec"

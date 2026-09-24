@@ -3,7 +3,7 @@ package backend
 import (
 	"strings"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // FrontendOperationLog records frontend-triggered Wails operation results into the app log.

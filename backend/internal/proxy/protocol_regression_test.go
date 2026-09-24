@@ -3,7 +3,7 @@ package proxy
 import (
 	"testing"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestVlessRealityURIUsesRealitySettings(t *testing.T) {

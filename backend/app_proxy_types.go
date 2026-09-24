@@ -1,6 +1,6 @@
 package backend
 
-import "ant-chrome/backend/internal/proxy"
+import "lianxiang-browser/backend/internal/proxy"
 
 type ProxyBuildDiagnostic = proxy.ProxyBuildDiagnostic
 type ProxyRuntimeDiagnostic = proxy.ProxyRuntimeDiagnostic

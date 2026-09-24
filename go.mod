@@ -1,4 +1,4 @@
-module ant-chrome
+module lianxiang-browser
 
 go 1.22.0
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 func (a *App) BrowserInstanceStatus(profileId string) (*BrowserProfile, error) {

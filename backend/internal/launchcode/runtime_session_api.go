@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 const (

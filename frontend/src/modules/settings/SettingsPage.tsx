@@ -20,6 +20,7 @@ import {
 } from './api'
 import type { AutomationNodeSource, AutomationRuntimeCheck, AutomationState, AutomationSystemNodeProbe } from './api'
 import { AutomationSettingsCard } from './components/AutomationSettingsCard'
+import { DataDirectorySettingsCard } from './components/DataDirectorySettingsCard'
 import { useSettingsProgressEffects } from './hooks/useSettingsProgressEffects'
 import { SettingsAdvancedCard, SettingsBasicFeatureCards } from './components/SettingsGeneralCards'
 import { defaultSettings } from './types'
@@ -298,6 +299,7 @@ export function SettingsPage() {
       <Card title="主题">
         <ThemeSwitcher />
       </Card>
+      <DataDirectorySettingsCard onDataDirChange={() => { void loadSettings() }} />
       <SettingsBasicFeatureCards settings={settings} onChange={handleChange} />
       <AutomationSettingsCard
         automationState={automationState}
