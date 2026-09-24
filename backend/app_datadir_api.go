@@ -54,7 +54,7 @@ func (a *App) DataDirectoryGetInfo() DataDirectoryInfo {
 	customDir := NormalizeCustomDataDir(a.appRoot, config.CustomDataDir)
 
 	isValid := false
-	if customDir != "" {
+	if customDir != "" && !IsProtectedInstallDataDir(a.appRoot, customDir) {
 		if info, err := os.Stat(customDir); err == nil && info.IsDir() && isDataDirectoryWritable(customDir) {
 			isValid = true
 		}
@@ -102,6 +102,11 @@ func (a *App) DataDirectorySetCustom(directory string, useCustom bool) (DataDire
 	}
 
 	if useCustom {
+		// 受保护安装目录只有管理员进程可写，普通启动会回退到默认目录，
+		// 所以即使当前进程可写也不能保存为数据目录。
+		if IsProtectedInstallDataDir(a.appRoot, directory) {
+			directory = RuntimeDefaultStateRoot(a.appRoot)
+		}
 		// 验证目录是否存在
 		info, err := os.Stat(directory)
 		if err != nil {
@@ -150,6 +155,18 @@ func (a *App) DataDirectorySetCustom(directory string, useCustom bool) (DataDire
 func writableDefaultForInstallDir(appRoot, requested string, writable func(string) bool) (string, bool) {
 	installDir := apppath.InstallRoot(appRoot)
 	return writableDefaultForInstallPath(installDir, RuntimeDefaultStateRoot(appRoot), requested, writable)
+}
+
+// IsProtectedInstallDataDir reports whether dir lies inside an install
+// directory that normal user processes cannot write, such as Program Files.
+// An elevated process (for example one launched from the installer finish
+// page) can write there, so writability alone must not accept it.
+func IsProtectedInstallDataDir(appRoot, dir string) bool {
+	dir = strings.TrimSpace(dir)
+	if dir == "" || !RuntimeUsesDetachedState(appRoot) {
+		return false
+	}
+	return dataDirectoryPathEqualOrWithin(dir, apppath.InstallRoot(appRoot))
 }
 
 func writableDefaultForInstallPath(installDir, defaultDir, requested string, writable func(string) bool) (string, bool) {

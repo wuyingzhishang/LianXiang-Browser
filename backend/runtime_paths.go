@@ -22,6 +22,11 @@ func RuntimeDefaultStateRoot(appRoot string) string {
 	return apppath.DefaultStateRoot(appRoot)
 }
 
+// AdoptInstallState 把管理员进程写入受保护安装目录的较新数据库和代理配置接回用户状态目录。
+func AdoptInstallState(appRoot string) ([]string, error) {
+	return apppath.AdoptInstallState(appRoot)
+}
+
 // RuntimeUsesDetachedState 表示当前是否启用了“安装目录只读、状态目录独立”的模式。
 func RuntimeUsesDetachedState(appRoot string) bool {
 	return apppath.IsDetached(appRoot)

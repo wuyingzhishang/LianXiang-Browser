@@ -81,7 +81,7 @@ export function DataDirectorySettingsCard({ onDataDirChange }: DataDirectorySett
 
       const redirected = useCustom && !sameDirectoryPath(customDirInput, updated.customDataDir)
       if (redirected) {
-        toast.warning(`所选安装目录不可写，已改用可写目录：${updated.customDataDir}`)
+        toast.warning(`安装目录受 Windows 保护，普通启动无法写入，已改用：${updated.customDataDir}`)
       } else {
         toast.success('数据目录配置已保存')
       }

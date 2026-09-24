@@ -241,6 +241,16 @@ cancel_install:
   Abort
 FunctionEnd
 
+; The installer runs elevated. Launching the app directly from the finish page
+; would give it an administrator token: the protected install directory then
+; looks writable, gets picked as the data directory, and the next normal launch
+; falls back to the default directory. Chrome also drops elevation on its own,
+; so instances started from that session cannot write their profile directory.
+; Starting through the shell gives the app the same token as the shortcut.
+Function LaunchAsCurrentUser
+  Exec '"$WINDIR\explorer.exe" "$INSTDIR\${PRODUCT_EXE}"'
+FunctionEnd
+
 Name "${PRODUCT_NAME} ${VERSION}"
 OutFile "..\publish\output\LianXiangBrowser-Setup-${VERSION}.exe"
 InstallDir "${INSTALL_DIR}"
@@ -263,8 +273,9 @@ RequestExecutionLevel admin
 !define MUI_COMPONENTSPAGE_SMALLDESC
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
-!define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXE}"
+!define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Launch 链享浏览器"
+!define MUI_FINISHPAGE_RUN_FUNCTION LaunchAsCurrentUser
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM

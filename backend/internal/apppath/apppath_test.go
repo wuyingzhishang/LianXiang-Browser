@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestWindowsProtectedInstallUsesUserStateRoot(t *testing.T) {
@@ -169,5 +170,92 @@ func TestEnsureWritableLayoutRejectsCustomFilePath(t *testing.T) {
 	t.Cleanup(func() { SetCustomDataDir("") })
 	if err := ensureWritableLayoutForOS(installRoot, "windows"); err == nil {
 		t.Fatal("custom data file path should be rejected")
+	}
+}
+
+func protectedInstallForTest(t *testing.T) (installRoot, stateRoot string) {
+	t.Helper()
+	localAppData := filepath.Join(t.TempDir(), "LocalAppData")
+	t.Setenv("LOCALAPPDATA", localAppData)
+	programFiles := filepath.Join(t.TempDir(), "Program Files")
+	t.Setenv("ProgramFiles", programFiles)
+	installRoot = filepath.Join(programFiles, "链享浏览器")
+	stateRoot = filepath.Join(localAppData, "链享浏览器")
+	for _, dir := range []string{filepath.Join(installRoot, "data"), filepath.Join(stateRoot, "data")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return installRoot, stateRoot
+}
+
+func writeFileWithTime(t *testing.T, path, content string, modTime time.Time) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, modTime, modTime); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAdoptInstallStateReplacesOlderStateDatabase(t *testing.T) {
+	installRoot, stateRoot := protectedInstallForTest(t)
+	now := time.Now()
+	writeFileWithTime(t, filepath.Join(stateRoot, "data", "app.db"), "old", now.Add(-time.Hour))
+	writeFileWithTime(t, filepath.Join(stateRoot, "data", "app.db-wal"), "old-wal", now.Add(-time.Hour))
+	writeFileWithTime(t, filepath.Join(installRoot, "data", "app.db"), "new", now)
+
+	adopted, err := adoptInstallStateForOS(installRoot, "windows")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(adopted) != 1 || adopted[0] != filepath.Join("data", "app.db") {
+		t.Fatalf("adopted = %#v, want data/app.db", adopted)
+	}
+	if got, _ := os.ReadFile(filepath.Join(stateRoot, "data", "app.db")); string(got) != "new" {
+		t.Fatalf("state app.db = %q, want new", got)
+	}
+	if _, err := os.Stat(filepath.Join(stateRoot, "data", "app.db-wal")); !os.IsNotExist(err) {
+		t.Fatalf("stale WAL must not stay beside the adopted database: %v", err)
+	}
+	backups, _ := filepath.Glob(filepath.Join(stateRoot, "data", "app.db.before-install-adopt-*"))
+	if len(backups) != 1 {
+		t.Fatalf("backups = %#v, want the replaced database kept", backups)
+	}
+	if got, _ := os.ReadFile(backups[0]); string(got) != "old" {
+		t.Fatalf("backup content = %q, want old", got)
+	}
+}
+
+func TestAdoptInstallStateKeepsNewerStateDatabase(t *testing.T) {
+	installRoot, stateRoot := protectedInstallForTest(t)
+	now := time.Now()
+	writeFileWithTime(t, filepath.Join(installRoot, "data", "app.db"), "old", now.Add(-time.Hour))
+	writeFileWithTime(t, filepath.Join(stateRoot, "data", "app.db"), "new", now)
+
+	adopted, err := adoptInstallStateForOS(installRoot, "windows")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(adopted) != 0 {
+		t.Fatalf("adopted = %#v, want nothing", adopted)
+	}
+	if got, _ := os.ReadFile(filepath.Join(stateRoot, "data", "app.db")); string(got) != "new" {
+		t.Fatalf("state app.db = %q, want new", got)
+	}
+}
+
+func TestAdoptInstallStateIgnoresPortableInstall(t *testing.T) {
+	t.Setenv("ProgramFiles", filepath.Join(t.TempDir(), "Program Files"))
+	installRoot := filepath.Join(t.TempDir(), "portable")
+	if err := os.MkdirAll(filepath.Join(installRoot, "data"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFileWithTime(t, filepath.Join(installRoot, "data", "app.db"), "db", time.Now())
+
+	adopted, err := adoptInstallStateForOS(installRoot, "windows")
+	if err != nil || len(adopted) != 0 {
+		t.Fatalf("adopted = %#v, err = %v, want no-op", adopted, err)
 	}
 }

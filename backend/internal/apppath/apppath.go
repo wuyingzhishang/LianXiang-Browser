@@ -9,6 +9,7 @@ import (
 	goruntime "runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 const appStateDirName = "lianxiang-browser"
@@ -214,6 +215,80 @@ func ensureWritableLayoutForOS(appRoot, goos string) error {
 	}
 
 	return nil
+}
+
+// installOnlyStateFiles 是只由应用写入、安装包不会携带的状态文件。
+// config.yaml 不在其中：安装包会写入默认配置，按修改时间判断会误把默认值当成用户数据。
+var installOnlyStateFiles = []string{
+	filepath.Join("data", "app.db"),
+	"proxies.yaml",
+}
+
+// AdoptInstallState 把以管理员身份运行时写入受保护安装目录、且比用户状态目录更新的
+// 数据库和代理配置接回用户状态目录。被替换的旧文件会保留为带时间戳的备份。
+// 仅用于修复旧版本把安装目录保存为自定义数据目录的情况，调用方需保证数据库尚未打开。
+func AdoptInstallState(appRoot string) ([]string, error) {
+	return adoptInstallStateForOS(appRoot, goruntime.GOOS)
+}
+
+func adoptInstallStateForOS(appRoot, goos string) ([]string, error) {
+	root := detectForOS(appRoot, goos)
+	if !root.detached {
+		return nil, nil
+	}
+	stamp := time.Now().Format("20060102-150405")
+	var adopted []string
+	for _, rel := range installOnlyStateFiles {
+		src := filepath.Join(root.installRoot, rel)
+		dst := filepath.Join(root.stateRoot, rel)
+		srcInfo, err := os.Stat(src)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return adopted, err
+		}
+		if srcInfo.IsDir() {
+			continue
+		}
+		dstInfo, err := os.Stat(dst)
+		if err == nil && !srcInfo.ModTime().After(dstInfo.ModTime()) {
+			continue
+		}
+		if err != nil && !os.IsNotExist(err) {
+			return adopted, err
+		}
+		// SQLite 的 -wal / -shm 必须与主库一起移动，否则会把旧日志套用到新库上。
+		for _, suffix := range []string{"", "-wal", "-shm"} {
+			if err := backupFileIfExists(dst+suffix, dst+suffix+".before-install-adopt-"+stamp); err != nil {
+				return adopted, err
+			}
+		}
+		for _, suffix := range []string{"", "-wal", "-shm"} {
+			info, err := os.Stat(src + suffix)
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return adopted, err
+			}
+			if err := copyFile(src+suffix, dst+suffix, info.Mode().Perm()|0o600); err != nil {
+				return adopted, err
+			}
+		}
+		adopted = append(adopted, rel)
+	}
+	return adopted, nil
+}
+
+func backupFileIfExists(path, backupPath string) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return os.Rename(path, backupPath)
 }
 
 func detect(appRoot string) roots {

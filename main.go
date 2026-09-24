@@ -152,6 +152,29 @@ func (a *App) DataDirectoryMigrate(options backend.DataDirectoryMigrateOptions) 
 	return a.App.DataDirectoryMigrate(options)
 }
 
+// repairProtectedInstallDataDir 修复旧版本把受保护安装目录保存为数据目录的问题：
+// 安装程序完成页以管理员身份拉起应用时安装目录可写，数据会写进去，之后普通启动又
+// 因为不可写回退到默认目录，表现为“重启后跳回默认目录”。这里在打开数据库之前、
+// 确认没有其他应用实例后，把安装目录中较新的数据库和代理配置接回默认状态目录，
+// 并取消该自定义目录。
+func repairProtectedInstallDataDir(appRoot, customDataDir string) {
+	details := map[string]interface{}{"custom_data_dir": customDataDir}
+	adopted, err := backend.AdoptInstallState(appRoot)
+	if err != nil {
+		// 接回失败时保留原选择，下一次启动还可以重试，避免丢失安装目录里的数据。
+		details["error"] = err.Error()
+		lifecycle.Log(appRoot, "data_dir.protected_install.adopt_error", details)
+		log.Printf("接回安装目录数据失败: %v", err)
+		return
+	}
+	details["adopted"] = adopted
+	if saveErr := backend.SaveDataDirConfigForAppRoot(appRoot, backend.DataDirConfig{}); saveErr != nil {
+		details["save_error"] = saveErr.Error()
+	}
+	lifecycle.Log(appRoot, "data_dir.protected_install.repaired", details)
+	log.Printf("自定义数据目录位于受保护安装目录，已改用默认目录: %s", backend.RuntimeDefaultStateRoot(appRoot))
+}
+
 func main() {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -207,12 +230,18 @@ func main() {
 	}
 
 	// 尽早加载数据目录配置，在 EnsureRuntimeLayout 之前
+	protectedInstallDataDir := ""
 	if dataDirConfig, err := backend.LoadDataDirConfigForAppRoot(appRoot); err == nil {
 		if dataDirConfig.UseCustomDataDir && strings.TrimSpace(dataDirConfig.CustomDataDir) != "" {
 			customDataDir := backend.NormalizeCustomDataDir(appRoot, dataDirConfig.CustomDataDir)
-			backend.SetCustomDataDir(customDataDir)
-			if startupDebugEnabled {
-				log.Printf("使用自定义数据目录: %s", customDataDir)
+			if backend.IsProtectedInstallDataDir(appRoot, customDataDir) {
+				// 普通启动无法写入受保护安装目录，改用默认目录；数据接回在确认为主实例后执行。
+				protectedInstallDataDir = customDataDir
+			} else {
+				backend.SetCustomDataDir(customDataDir)
+				if startupDebugEnabled {
+					log.Printf("使用自定义数据目录: %s", customDataDir)
+				}
 			}
 		}
 	} else {
@@ -265,6 +294,9 @@ func main() {
 	}
 	defer singleInstance.Close()
 	defer lifecycle.Log(appRoot, "process.defer_exit", nil)
+	if protectedInstallDataDir != "" {
+		repairProtectedInstallDataDir(appRoot, protectedInstallDataDir)
+	}
 	if startupDebugEnabled && backend.RuntimeUsesDetachedState(appRoot) {
 		log.Printf("检测到安装目录需要只读运行，状态目录切换到: %s", backend.RuntimeStateRoot(appRoot))
 	}
