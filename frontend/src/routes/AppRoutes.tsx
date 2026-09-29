@@ -13,10 +13,6 @@ const S3ConfigPage = lazyNamed(
   () => import("../modules/backup/channels/s3/S3ConfigPage"),
   "S3ConfigPage",
 );
-const ProfilePage = lazyNamed(
-  () => import("../modules/profile/ProfilePage"),
-  "ProfilePage",
-);
 const NotificationsPage = lazyNamed(
   () => import("../modules/notifications/NotificationsPage"),
   "NotificationsPage",
@@ -86,7 +82,6 @@ export function AppRoutes() {
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/system/backup" element={<BackupPage />} />
       <Route path="/system/backup/s3" element={<S3ConfigPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/browser/list" element={<BrowserListPage />} />
       <Route path="/browser/detail/:id" element={<BrowserDetailPage />} />

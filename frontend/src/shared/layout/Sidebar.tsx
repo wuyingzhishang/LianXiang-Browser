@@ -21,7 +21,6 @@ import {
   Bot,
   Puzzle,
   Tag,
-  User,
   type LucideIcon,
 } from "lucide-react";
 import clsx from "clsx";
@@ -52,7 +51,6 @@ const iconMap: Record<string, LucideIcon> = {
   Bookmark,
   BookOpen,
   Tag,
-  User,
 };
 
 function getIcon(iconName: string): LucideIcon {
@@ -200,25 +198,6 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-
-      <div className="border-t border-[var(--color-border-muted)] p-3">
-        <Link
-          to="/profile"
-          title={sidebarCollapsed ? "关于我" : undefined}
-          className={clsx(
-            "flex items-center rounded-lg transition-all duration-150",
-            isItemActive("/profile")
-              ? "bg-[var(--color-accent)] text-[var(--color-text-inverse)] shadow-sm"
-              : "text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-muted)] hover:text-[var(--color-text-primary)]",
-            sidebarCollapsed
-              ? "relative mx-auto h-10 w-10 justify-center"
-              : "gap-3 px-3 py-2.5",
-          )}
-        >
-          <User className="h-[18px] w-[18px] shrink-0" />
-          {!sidebarCollapsed && <span className="truncate text-sm font-medium">关于我</span>}
-        </Link>
-      </div>
 
       {/* Toggle Button */}
       <div className="p-3 border-t border-[var(--color-border-muted)]">
