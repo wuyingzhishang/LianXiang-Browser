@@ -154,7 +154,7 @@ Windows 分支使用的项目路径：
 - publish\output\LianXiangBrowser-Setup-<version>.exe
 - publish\output\LianXiangBrowser-<version>-windows-amd64.exe
 - publish\output\LianXiangBrowser-<version>-windows-amd64-portable.zip
-- 上述每个文件对应的 `.sha256` 和 `publish\output\SHA256SUMS.txt`
+- `publish\output\SHA256SUMS.txt`（上述三个文件的 SHA-256 汇总）
 ```
 
 说明：

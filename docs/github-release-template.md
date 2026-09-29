@@ -1,32 +1,37 @@
-# GitHub Release 简介：v1.9.3
+# GitHub Release 简介：v1.9.3（同版本更新）
 
 ## 标题
 
 ```text
-v1.9.3 - Windows 实例启动稳定性与完整发布包
+v1.9.3 - 启动提速、界面精简与 Windows 发布包更新
 ```
 
 ## 描述
 
-v1.9.3 修复异常退出或升级后残留 Chrome 单实例锁导致浏览器进程在就绪前退出的问题，并重新生成完整 Windows 发布集。
+v1.9.3 同版本更新：应用启动由约 10 秒缩短到 1 秒以内，移除个人介绍页面，重新构建 Windows 安装包、本地 EXE 和便携 ZIP。版本号保持不变。
 
 ### 主要更新
 
+- 启动提速：运行数据目录同步改为指纹标记校验，布局未变化时跳过全量文件遍历；实测后端启动耗时由约 9.8 秒降至约 0.05 秒。
+- 残留进程检查先用系统进程快照预判，无残留时不再调用 PowerShell；回收站清理延后 30 秒执行。
+- 实例、内核、代理和分组列表在后端发出 `app:ready` 就绪信号后加载，取代空列表轮询重试；代理绑定校验只读取一次代理目录。
 - 启动前检查用户数据目录中的浏览器进程；确认没有活动进程后，清理 `SingletonLock`、`SingletonCookie` 和 `SingletonSocket` 残留文件。
 - 保留正在运行实例的锁文件，避免误伤活动浏览器进程。
+- 移除侧边栏“关于我”入口及对应的个人介绍页面和配置。
 - 安装到 `Program Files` 等受保护目录时，将运行数据和单实例锁放到当前用户可写目录。
 - 自定义数据目录启动前验证根目录和 `data` 子目录的写入能力；不可写时自动改用用户可写的稳定状态目录。
 - Windows 发布包包含本地 EXE、NSIS 安装包、便携 ZIP 和 SHA-256 校验文件；三个产物的摘要统一写入 `SHA256SUMS.txt`。
+- 本次构建环境未提供可分发的 Windows 浏览器内核；首次使用前请在应用内下载或自行准备兼容内核。
 
 ### Windows 下载
 
 | 文件 | 说明 | SHA-256 |
 | --- | --- | --- |
-| `LianXiangBrowser-1.9.3-windows-amd64.exe` | 本地 EXE | `f6eced7a38a8c77e45d24d21d830aac3fdb60006ac004df6031cbe1505d6277f` |
-| `LianXiangBrowser-Setup-1.9.3.exe` | Windows 安装包 | `e34ce7715fb632ef2ab9dde9f4bc4329286af81658420b9f56e14bb38f587a94` |
-| `LianXiangBrowser-1.9.3-windows-amd64-portable.zip` | 便携 ZIP | `bf6fc16714485e3f2e55dbc747fd7028f056c97858496df751773776f54b32ad` |
+| `LianXiangBrowser-1.9.3-windows-amd64.exe` | 本地 EXE | `c82ab3acbb7523f234987d3803964f97fdeb6687ccbbfe9956d799a9a8364133` |
+| `LianXiangBrowser-Setup-1.9.3.exe` | Windows 安装包 | `b7d2a5a169a6df5e6782d155d4a0a7702b0be13f56102973970aceedabd5edab` |
+| `LianXiangBrowser-1.9.3-windows-amd64-portable.zip` | 便携 ZIP | `c3cff980429e9ffe18cae951fd69c6582c68c35fa1337968267d5a1016d42db2` |
 
-发布页上传三个 Windows 产物和统一的 `SHA256SUMS.txt` 即可；摘要文件列出每个产物的 SHA-256，以上摘要已由本次构建结果核对。
+发布页上传三个 Windows 产物和统一的 `SHA256SUMS.txt`。上述摘要与本次 `release/v1.9.3/SHA256SUMS.txt` 一致。
 
 ### 升级提示
 

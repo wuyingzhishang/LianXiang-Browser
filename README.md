@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](https://github.com/wuyingzhishang/LianXiang-Browser/releases)
 [![Issues](https://img.shields.io/github/issues/wuyingzhishang/LianXiang-Browser)](https://github.com/wuyingzhishang/LianXiang-Browser/issues)
 
-当前版本：`1.9.3` · 2026-09-24
+当前版本：`1.9.3` · 2026-09-29
 
 ## 推荐内核项目
 
@@ -55,8 +55,11 @@
 
 ## 近期更新
 
-### 1.9.3 · 2026-09-24
+### 1.9.3 · 2026-09-29
 
+- 启动提速：数据目录同步改为指纹校验，残留进程检查先走进程快照，回收站清理延后执行；实测后端启动耗时由约 9.8 秒降至约 0.05 秒。
+- 列表加载：前端等待 `app:ready` 就绪信号后一次加载列表数据，不再空列表轮询重试。
+- 界面精简：移除侧边栏“关于我”入口及对应的个人介绍页面。
 - 实例启动稳定性：启动前清理无活动浏览器留下的 Chrome 单实例锁，降低升级或异常退出后实例在就绪前退出的问题。
 - Windows 发布集：重新生成本地 EXE、NSIS 安装包和便携 ZIP，三个产物及其 SHA-256 统一写入一个 `SHA256SUMS.txt`。
 - 发布维护：清理旧版本发行产物和临时 staging，发布目录只保留当前版本文件与说明文档。
