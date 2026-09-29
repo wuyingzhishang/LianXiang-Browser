@@ -127,7 +127,20 @@ func (m *Manager) ResolveProfileProxyBinding(profile *Profile) (bool, bool, stri
 	if profile == nil {
 		return false, false, ""
 	}
-	proxies := m.listProxyCatalog()
+	return ResolveProfileProxyBindingIn(profile, m.listProxyCatalog())
+}
+
+// ProxyCatalog 返回代理池（含内置直连），供批量绑定修复复用同一份列表。
+func (m *Manager) ProxyCatalog() []Proxy {
+	return m.listProxyCatalog()
+}
+
+// ResolveProfileProxyBindingIn 与 ResolveProfileProxyBinding 相同，但使用调用方提供的代理列表，
+// 批量处理多个实例时避免每个实例都查询一次代理表。
+func ResolveProfileProxyBindingIn(profile *Profile, proxies []Proxy) (bool, bool, string) {
+	if profile == nil {
+		return false, false, ""
+	}
 	if len(proxies) == 0 {
 		return false, false, ""
 	}

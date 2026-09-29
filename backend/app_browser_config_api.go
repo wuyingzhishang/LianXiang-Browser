@@ -14,6 +14,13 @@ import (
 )
 
 func (a *App) GetBrowserSettings() BrowserSettings {
+	// 配置在启动早期即已加载；只有前端调用早于 startup 时才需要等待。
+	if a.config == nil {
+		a.waitReady(startupReadyWait)
+	}
+	if a.config == nil {
+		return BrowserSettings{}
+	}
 	return BrowserSettings{
 		UserDataRoot:           a.config.Browser.UserDataRoot,
 		DefaultFingerprintArgs: append([]string{}, a.config.Browser.DefaultFingerprintArgs...),
@@ -59,7 +66,7 @@ func (a *App) SaveBrowserSettings(settings BrowserSettings) error {
 }
 
 func (a *App) BrowserCoreList() []BrowserCore {
-	if a == nil || a.browserMgr == nil {
+	if a == nil || !a.waitReady(startupReadyWait) || a.browserMgr == nil {
 		return []BrowserCore{}
 	}
 	return a.browserMgr.ListCores()

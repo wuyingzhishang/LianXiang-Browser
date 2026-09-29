@@ -1,6 +1,8 @@
 package apppath
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"lianxiang-browser/backend/internal/fsutil"
@@ -25,12 +27,25 @@ var rootsCache sync.Map
 var customDataDirOverride string
 var customDataDirMutex sync.RWMutex
 
+// layoutEnsured 记录本进程内已完成布局同步的 (goos, appRoot, customDir)。
+// main.go 与 App.startup 都会调用 EnsureWritableLayout，第二次调用无需重复检查。
+var layoutEnsured sync.Map
+
+// layoutSyncMarkerName 保存上次成功同步时源目录的指纹。安装目录 data 可能包含
+// 数万个文件，逐个 Stat 目标文件会让每次启动多花数秒；指纹未变化时直接跳过遍历。
+const layoutSyncMarkerName = ".layout-sync-v2"
+
+// layoutFingerprintDepth 控制指纹覆盖的目录层级。新增/删除条目会改变其父目录的
+// 修改时间，两层足以覆盖 data/<子目录>/<条目> 这一级的变化，同时只需少量 ReadDir。
+const layoutFingerprintDepth = 2
+
 // SetCustomDataDir 设置全局自定义数据目录
 func SetCustomDataDir(path string) {
 	customDataDirMutex.Lock()
 	defer customDataDirMutex.Unlock()
 	customDataDirOverride = strings.TrimSpace(path)
 	rootsCache = sync.Map{}
+	layoutEnsured = sync.Map{}
 }
 
 // GetCustomDataDir 获取全局自定义数据目录
@@ -117,10 +132,22 @@ func EnsureWritableLayout(appRoot string) error {
 }
 
 func ensureWritableLayoutForOS(appRoot, goos string) error {
-	root := detectForOS(appRoot, goos)
 	customDataDirMutex.RLock()
 	custom := strings.TrimSpace(customDataDirOverride)
 	customDataDirMutex.RUnlock()
+	ensuredKey := buildCacheKey(goos, normalizeRoot(appRoot)) + "\x00" + custom
+	if _, ok := layoutEnsured.Load(ensuredKey); ok {
+		return nil
+	}
+	if err := syncWritableLayoutForOS(appRoot, goos, custom); err != nil {
+		return err
+	}
+	layoutEnsured.Store(ensuredKey, struct{}{})
+	return nil
+}
+
+func syncWritableLayoutForOS(appRoot, goos, custom string) error {
+	root := detectForOS(appRoot, goos)
 	if custom != "" {
 		customRoot, err := filepath.Abs(custom)
 		if err != nil {
@@ -151,6 +178,7 @@ func ensureWritableLayoutForOS(appRoot, goos string) error {
 		// 自定义目录可能是在旧版本中只保存了开关，或用户点击保存后
 		// 尚未完成迁移。启动时仅补齐目标中不存在的文件，避免覆盖用户
 		// 已有数据，同时兼容安装目录和旧默认状态目录中的数据。
+		var plan []layoutCopy
 		for _, dir := range []string{"data", "chrome"} {
 			targetDir := filepath.Join(customRoot, dir)
 			for _, sourceDir := range []string{
@@ -163,20 +191,16 @@ func ensureWritableLayoutForOS(appRoot, goos string) error {
 				if pathEqualOrWithin(targetDir, sourceDir) {
 					continue
 				}
-				if err := copyDirIfMissing(sourceDir, targetDir); err != nil {
-					return err
-				}
+				plan = append(plan, layoutCopy{src: sourceDir, dst: targetDir, dir: true})
 			}
 		}
 		for _, file := range []string{"config.yaml", "proxies.yaml", "backup.local.yaml"} {
-			if err := copyFileIfMissing(filepath.Join(root.stateRoot, file), filepath.Join(customRoot, file)); err != nil {
-				return err
-			}
-			if err := copyFileIfMissing(filepath.Join(root.installRoot, file), filepath.Join(customRoot, file)); err != nil {
-				return err
-			}
+			plan = append(plan,
+				layoutCopy{src: filepath.Join(root.stateRoot, file), dst: filepath.Join(customRoot, file)},
+				layoutCopy{src: filepath.Join(root.installRoot, file), dst: filepath.Join(customRoot, file)},
+			)
 		}
-		return nil
+		return runLayoutCopyPlan(customRoot, plan)
 	}
 	if !root.detached {
 		return nil
@@ -188,33 +212,131 @@ func ensureWritableLayoutForOS(appRoot, goos string) error {
 	// The first detached launch may already have created state/data before the
 	// application database is initialized. Merge the packaged data directory
 	// afterward so that an existing install keeps its profiles and app.db.
-	if err := copyDirIfMissing(
-		filepath.Join(root.installRoot, "data"),
-		filepath.Join(root.stateRoot, "data"),
-	); err != nil {
-		return err
-	}
+	return runLayoutCopyPlan(root.stateRoot, []layoutCopy{
+		{src: filepath.Join(root.installRoot, "data"), dst: filepath.Join(root.stateRoot, "data"), dir: true},
+		{src: filepath.Join(root.installRoot, "config.yaml"), dst: filepath.Join(root.stateRoot, "config.yaml")},
+		{src: filepath.Join(root.installRoot, "proxies.yaml"), dst: filepath.Join(root.stateRoot, "proxies.yaml")},
+		{src: filepath.Join(root.installRoot, "chrome"), dst: filepath.Join(root.stateRoot, "chrome"), dir: true},
+	})
+}
 
-	if err := copyFileIfMissing(
-		filepath.Join(root.installRoot, "config.yaml"),
-		filepath.Join(root.stateRoot, "config.yaml"),
-	); err != nil {
-		return err
-	}
-	if err := copyFileIfMissing(
-		filepath.Join(root.installRoot, "proxies.yaml"),
-		filepath.Join(root.stateRoot, "proxies.yaml"),
-	); err != nil {
-		return err
-	}
-	if err := copyDirIfMissing(
-		filepath.Join(root.installRoot, "chrome"),
-		filepath.Join(root.stateRoot, "chrome"),
-	); err != nil {
-		return err
-	}
+type layoutCopy struct {
+	src string
+	dst string
+	dir bool
+}
 
+// runLayoutCopyPlan 按顺序执行“仅补齐缺失文件”的复制计划。
+// 源目录指纹与 markerRoot 下记录的一致且目标目录仍存在时，跳过整个遍历。
+func runLayoutCopyPlan(markerRoot string, plan []layoutCopy) error {
+	markerPath := filepath.Join(markerRoot, layoutSyncMarkerName)
+	if layoutPlanUpToDate(markerPath, layoutPlanFingerprint(plan), plan) {
+		return nil
+	}
+	for _, item := range plan {
+		var err error
+		if item.dir {
+			err = copyDirIfMissing(item.src, item.dst)
+		} else {
+			err = copyFileIfMissing(item.src, item.dst)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	// 复制完成后重新计算指纹：当目标嵌套在另一个源之下（例如状态目录的 data
+	// 同时是源）时，复制会改变源的修改时间。标记写入失败只影响下次启动速度。
+	writeLayoutMarker(markerPath, layoutPlanFingerprint(plan))
 	return nil
+}
+
+func layoutPlanUpToDate(markerPath, fingerprint string, plan []layoutCopy) bool {
+	stored, err := os.ReadFile(markerPath)
+	if err != nil || strings.TrimSpace(string(stored)) != fingerprint {
+		return false
+	}
+	// 用户手动删除了整个目标目录（例如重置数据）时，需要重新从源补齐。
+	for _, item := range plan {
+		if !item.dir {
+			continue
+		}
+		if srcInfo, err := os.Stat(item.src); err != nil || !srcInfo.IsDir() {
+			continue
+		}
+		if dstInfo, err := os.Stat(item.dst); err != nil || !dstInfo.IsDir() {
+			return false
+		}
+	}
+	return true
+}
+
+func writeLayoutMarker(markerPath, fingerprint string) {
+	if err := os.MkdirAll(filepath.Dir(markerPath), 0755); err != nil {
+		return
+	}
+	tmp := markerPath + ".tmp"
+	if err := os.WriteFile(tmp, []byte(fingerprint+"\n"), 0644); err != nil {
+		return
+	}
+	if err := os.Rename(tmp, markerPath); err != nil {
+		_ = os.Remove(tmp)
+	}
+}
+
+func layoutPlanFingerprint(plan []layoutCopy) string {
+	h := sha256.New()
+	for _, item := range plan {
+		fmt.Fprintf(h, "plan\x00%s\x00%s\x00%t\n", item.src, item.dst, item.dir)
+		writePathFingerprint(h, item.src, layoutFingerprintDepth)
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func writePathFingerprint(w io.Writer, path string, depth int) {
+	info, err := os.Stat(path)
+	if err != nil {
+		fmt.Fprintf(w, "missing\x00%s\n", path)
+		return
+	}
+	writeInfoFingerprint(w, ".", info)
+	if info.IsDir() {
+		writeDirFingerprint(w, path, "", depth)
+	}
+}
+
+func writeDirFingerprint(w io.Writer, dir, relPrefix string, depth int) {
+	if depth <= 0 {
+		return
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		fmt.Fprintf(w, "unreadable\x00%s\x00%v\n", relPrefix, err)
+		return
+	}
+	// os.ReadDir 已按名称排序，指纹结果稳定。
+	for _, entry := range entries {
+		rel := entry.Name()
+		if relPrefix != "" {
+			rel = relPrefix + "/" + rel
+		}
+		info, err := entry.Info()
+		if err != nil {
+			fmt.Fprintf(w, "gone\x00%s\n", rel)
+			continue
+		}
+		writeInfoFingerprint(w, rel, info)
+		if entry.IsDir() {
+			writeDirFingerprint(w, filepath.Join(dir, entry.Name()), rel, depth-1)
+		}
+	}
+}
+
+func writeInfoFingerprint(w io.Writer, rel string, info os.FileInfo) {
+	size := info.Size()
+	if info.IsDir() {
+		size = 0
+	}
+	fmt.Fprintf(w, "%s\x00%t\x00%d\x00%d\n", rel, info.IsDir(), size, info.ModTime().UnixNano())
 }
 
 // installOnlyStateFiles 是只由应用写入、安装包不会携带的状态文件。

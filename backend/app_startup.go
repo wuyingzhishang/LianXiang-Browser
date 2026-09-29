@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"lianxiang-browser/backend/internal/apppath"
 	"lianxiang-browser/backend/internal/automation"
 	"lianxiang-browser/backend/internal/browser"
@@ -24,6 +25,8 @@ import (
 
 // startup 应用启动时调用
 func (a *App) startup(ctx context.Context) {
+	startedAt := time.Now()
+	phases := newStartupPhases()
 	a.setRuntimeContext(ctx)
 	if err := apppath.EnsureWritableLayout(a.appRoot); err != nil {
 		runtime.LogFatal(ctx, fmt.Sprintf("初始化 Linux 用户数据目录失败: %v", err))
@@ -37,10 +40,13 @@ func (a *App) startup(ctx context.Context) {
 	a.config = cfg
 	a.applyRuntimeConfig(cfg.Runtime)
 
+	phases.mark("layout_config")
+
 	log := a.startupInitLogger(ctx, cfg)
 	if err := killResidualRuntimeProcesses(a.appRoot); err != nil {
 		log.Warn("清理上次异常退出遗留的代理进程失败", logger.F("error", err))
 	}
+	phases.mark("residual_processes")
 	a.startupLogEnvironment(log, cfg)
 	a.activateStableBackupLocalConfig()
 	if err := a.prepareBackupLocalConfig(); err != nil {
@@ -56,6 +62,7 @@ func (a *App) startup(ctx context.Context) {
 		log.Warn("安装目录数据库迁移失败", logger.F("error", err))
 	}
 	a.startupInitInterceptor(log, cfg)
+	phases.mark("backup_cores_restore")
 
 	db, err := a.startupInitDatabase(cfg)
 	if err != nil {
@@ -74,17 +81,69 @@ func (a *App) startup(ctx context.Context) {
 	if err := db.Migrate(); err != nil {
 		log.Error("数据库迁移失败", logger.F("error", err))
 	}
+	phases.mark("database")
 
 	a.startupInitManagers(cfg, db)
+	phases.mark("managers")
 	a.startupInitLaunchCode(log)
 	a.startupInitLaunchServer(log)
 	a.startupInitAutomation()
 	a.startupInitBridgeHooks()
 	a.startupInitSpeedScheduler()
 	a.startupInitBackupScheduler()
-	a.emitRuntimeEvent("app:ready")
+	phases.mark("services")
+	a.markReady()
+	log.Info("应用启动成功",
+		logger.F("elapsed_ms", time.Since(startedAt).Milliseconds()),
+		logger.F("phases_ms", phases.String()),
+	)
 
-	log.Info("应用启动成功")
+	// 回收站清理不影响首屏数据，放到就绪之后执行，避免与前端首次加载争用
+	// SQLite 单连接和 Manager 锁。
+	a.startupScheduleTrashCleanup()
+}
+
+// startupPhases 记录各启动阶段耗时，写入“应用启动成功”日志，便于定位启动变慢的阶段。
+type startupPhases struct {
+	last  time.Time
+	parts []string
+}
+
+func newStartupPhases() *startupPhases {
+	return &startupPhases{last: time.Now()}
+}
+
+func (p *startupPhases) mark(name string) {
+	now := time.Now()
+	p.parts = append(p.parts, fmt.Sprintf("%s=%d", name, now.Sub(p.last).Milliseconds()))
+	p.last = now
+}
+
+func (p *startupPhases) String() string {
+	return strings.Join(p.parts, " ")
+}
+
+// startupTrashCleanupDelay 推迟回收站清理：过期实例的数据目录可能很大，
+// 删除期间会持有 Manager 锁，放在首屏加载之后执行。
+const startupTrashCleanupDelay = 30 * time.Second
+
+func (a *App) startupScheduleTrashCleanup() {
+	mgr := a.browserMgr
+	if mgr == nil {
+		return
+	}
+	_ = a.startBackgroundTask(func(ctx context.Context) {
+		timer := time.NewTimer(startupTrashCleanupDelay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+		}
+		if err := mgr.CleanupExpiredTrash(); err != nil {
+			logger.New("Browser").Error("启动清理回收站失败", logger.F("error", err))
+		}
+	})
 }
 
 // restoreCustomDataDirectory repairs the upgrade path where an older build
@@ -220,15 +279,25 @@ func countDatabaseRows(db *sql.DB, table string) (int, error) {
 	return count, nil
 }
 
+// copyRuntimeFile 以流式方式复制数据库等大文件，避免整个文件读入内存。
 func copyRuntimeFile(src, dst string) error {
-	data, err := os.ReadFile(src)
+	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
+	defer in.Close()
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 func (a *App) startupLoadConfig() *config.Config {
@@ -313,9 +382,6 @@ func (a *App) startupInitManagers(cfg *config.Config, db *database.DB) {
 	a.migrateToSQLite()
 
 	a.browserMgr.InitData()
-	if err := a.browserMgr.CleanupExpiredTrash(); err != nil {
-		logger.New("Browser").Error("启动清理回收站失败", logger.F("error", err))
-	}
 	a.autoDetectCores()
 	a.loadProxies()
 	a.reconcileProfileProxyBindings()

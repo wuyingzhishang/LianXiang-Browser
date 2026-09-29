@@ -21,7 +21,7 @@ type BrowserProfileCopyOptions = browser.ProfileCopyOptions
 
 // BrowserProfileList 获取所有实例列表
 func (a *App) BrowserProfileList() []BrowserProfile {
-	if a == nil || a.browserMgr == nil {
+	if a == nil || !a.waitReady(startupReadyWait) || a.browserMgr == nil {
 		return []BrowserProfile{}
 	}
 	return a.browserMgr.List()

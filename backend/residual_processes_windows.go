@@ -11,6 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 func killResidualRuntimeProcesses(appRoot string) error {
@@ -23,6 +26,75 @@ func killResidualRuntimeProcesses(appRoot string) error {
 	}
 
 	exePath, _ := os.Executable()
+	// 启动 PowerShell + WMI 查询需要约 2 秒，而绝大多数启动时并没有遗留进程。
+	// 先用 Toolhelp 快照（毫秒级）确认 bin\ 下确有进程，再交给原有脚本处理
+	// “浏览器仍在运行则不清理”等判断。快照失败时保守地回退到脚本。
+	if found, err := hasProcessUnderDir(filepath.Join(appRoot, "bin"), exePath); err == nil && !found {
+		return nil
+	}
+	return killResidualRuntimeProcessesPowerShell(appRoot, exePath)
+}
+
+// hasProcessUnderDir 判断是否存在可执行文件位于 dir 之下的进程（排除 excludePath）。
+// 无权查询路径的进程（如其他用户或更高权限的进程）会被跳过，与 WMI 查询的可见范围一致。
+func hasProcessUnderDir(dir, excludePath string) (bool, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return false, err
+	}
+	prefix := strings.TrimRight(absDir, `\/`) + `\`
+	exclude := ""
+	if strings.TrimSpace(excludePath) != "" {
+		if abs, err := filepath.Abs(excludePath); err == nil {
+			exclude = abs
+		}
+	}
+
+	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return false, err
+	}
+	defer windows.CloseHandle(snapshot)
+
+	selfPID := uint32(os.Getpid())
+	var entry windows.ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+	for err = windows.Process32First(snapshot, &entry); err == nil; err = windows.Process32Next(snapshot, &entry) {
+		if entry.ProcessID == 0 || entry.ProcessID == selfPID {
+			continue
+		}
+		imagePath, ok := processImagePath(entry.ProcessID)
+		if !ok {
+			continue
+		}
+		if exclude != "" && strings.EqualFold(imagePath, exclude) {
+			continue
+		}
+		if len(imagePath) > len(prefix) && strings.EqualFold(imagePath[:len(prefix)], prefix) {
+			return true, nil
+		}
+	}
+	if err != windows.ERROR_NO_MORE_FILES {
+		return false, err
+	}
+	return false, nil
+}
+
+func processImagePath(pid uint32) (string, bool) {
+	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return "", false
+	}
+	defer windows.CloseHandle(handle)
+	buf := make([]uint16, windows.MAX_LONG_PATH)
+	size := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(handle, 0, &buf[0], &size); err != nil {
+		return "", false
+	}
+	return windows.UTF16ToString(buf[:size]), true
+}
+
+func killResidualRuntimeProcessesPowerShell(appRoot, exePath string) error {
 	psScript := `param([string]$Root, [string]$ExcludePath)
 $ErrorActionPreference = 'SilentlyContinue'
 if ([string]::IsNullOrWhiteSpace($Root) -or -not (Test-Path -LiteralPath $Root)) { exit 0 }

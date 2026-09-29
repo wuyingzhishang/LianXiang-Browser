@@ -11,6 +11,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 )
 
 type quitMode uint8
@@ -60,6 +61,11 @@ type App struct {
 	backupLocalConfigPathOverride string
 	stopServicesOnce              sync.Once
 	finalizeOnce                  sync.Once
+	// ready 在启动完成核心初始化（数据库、管理器、启动码服务）后关闭。
+	// Wails 在 OnStartup 返回前就会分发前端的绑定调用，列表类接口据此等待，
+	// 避免前端拿到空列表后反复轮询。
+	ready     chan struct{}
+	readyOnce sync.Once
 }
 
 // NewApp 创建新的应用实例
@@ -76,6 +82,44 @@ func NewApp(appRoot string, appVersion ...string) *App {
 		automationTargetCursor: make(map[string]string),
 		profileWindowMarkers:   make(map[string]*profileWindowMarker),
 		browserProcessMonitors: make(map[string]*browserProcessMonitor),
+		ready:                  make(chan struct{}),
+	}
+}
+
+// startupReadyWait 是列表接口等待后端初始化的上限。超时后按原逻辑返回空结果，
+// 前端仍会在 app:ready 事件到达时刷新。
+const startupReadyWait = 20 * time.Second
+
+func (a *App) markReady() {
+	if a == nil {
+		return
+	}
+	a.readyOnce.Do(func() {
+		if a.ready != nil {
+			close(a.ready)
+		}
+		a.emitRuntimeEvent("app:ready")
+	})
+}
+
+// waitReady 阻塞直到启动完成或超时，返回是否已就绪。
+// 未通过 NewApp 创建的 App（例如测试中直接构造）视为已就绪。
+func (a *App) waitReady(timeout time.Duration) bool {
+	if a == nil || a.ready == nil {
+		return true
+	}
+	select {
+	case <-a.ready:
+		return true
+	default:
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-a.ready:
+		return true
+	case <-timer.C:
+		return false
 	}
 }
 

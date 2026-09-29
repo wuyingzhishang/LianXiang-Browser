@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/logger"
 	"time"
 )
@@ -20,8 +21,9 @@ func (a *App) reconcileProfileProxyBindings() {
 
 	changedCount := 0
 	reboundCount := 0
+	proxies := a.browserMgr.ProxyCatalog()
 	for _, profile := range a.browserMgr.Profiles {
-		changed, boundInPool, mode := a.browserMgr.ResolveProfileProxyBinding(profile)
+		changed, boundInPool, mode := browser.ResolveProfileProxyBindingIn(profile, proxies)
 		if changed {
 			profile.UpdatedAt = time.Now().Format(time.RFC3339)
 			changedCount++

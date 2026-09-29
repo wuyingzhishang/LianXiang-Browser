@@ -10,7 +10,7 @@ import (
 )
 
 func (a *App) BrowserProxyList() []BrowserProxy {
-	if a == nil || a.browserMgr == nil || a.browserMgr.ProxyDAO == nil || a.config == nil {
+	if a == nil || !a.waitReady(startupReadyWait) || a.browserMgr == nil || a.browserMgr.ProxyDAO == nil || a.config == nil {
 		return []BrowserProxy{}
 	}
 	return browser.ListProxiesWithFallback(a.browserMgr.ProxyDAO, a.config.Browser.Proxies)

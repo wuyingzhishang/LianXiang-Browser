@@ -259,3 +259,85 @@ func TestAdoptInstallStateIgnoresPortableInstall(t *testing.T) {
 		t.Fatalf("adopted = %#v, err = %v, want no-op", adopted, err)
 	}
 }
+
+func TestEnsureWritableLayoutSkipsUnchangedSourceAfterMarker(t *testing.T) {
+	installRoot, stateRoot := protectedInstallForTest(t)
+	SetCustomDataDir("")
+	t.Cleanup(func() { SetCustomDataDir("") })
+	if err := os.WriteFile(filepath.Join(installRoot, "data", "a.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(stateRoot, layoutSyncMarkerName)); err != nil {
+		t.Fatalf("marker not written: %v", err)
+	}
+
+	// A file removed from the state root is not restored while the source is
+	// unchanged: the marker means the full walk is skipped.
+	if err := os.Remove(filepath.Join(stateRoot, "data", "a.txt")); err != nil {
+		t.Fatal(err)
+	}
+	SetCustomDataDir("") // reset the in-process guard, simulating a new launch
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(stateRoot, "data", "a.txt")); !os.IsNotExist(err) {
+		t.Fatalf("unchanged source should skip the copy walk, stat err = %v", err)
+	}
+
+	// Adding a source entry changes the fingerprint and triggers a merge.
+	if err := os.WriteFile(filepath.Join(installRoot, "data", "b.txt"), []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	SetCustomDataDir("")
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a.txt", "b.txt"} {
+		if _, err := os.Stat(filepath.Join(stateRoot, "data", name)); err != nil {
+			t.Fatalf("%s not merged after source change: %v", name, err)
+		}
+	}
+}
+
+func TestEnsureWritableLayoutResyncsWhenTargetDirectoryRemoved(t *testing.T) {
+	installRoot, stateRoot := protectedInstallForTest(t)
+	SetCustomDataDir("")
+	t.Cleanup(func() { SetCustomDataDir("") })
+	if err := os.WriteFile(filepath.Join(installRoot, "data", "a.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(filepath.Join(stateRoot, "data")); err != nil {
+		t.Fatal(err)
+	}
+	SetCustomDataDir("")
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(stateRoot, "data", "a.txt")); err != nil {
+		t.Fatalf("removed target directory was not restored: %v", err)
+	}
+}
+
+func TestEnsureWritableLayoutSecondCallInProcessIsNoop(t *testing.T) {
+	installRoot, stateRoot := protectedInstallForTest(t)
+	SetCustomDataDir("")
+	t.Cleanup(func() { SetCustomDataDir("") })
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(stateRoot, layoutSyncMarkerName)); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureWritableLayoutForOS(installRoot, "windows"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(stateRoot, layoutSyncMarkerName)); !os.IsNotExist(err) {
+		t.Fatalf("second in-process call should not re-sync, stat err = %v", err)
+	}
+}
