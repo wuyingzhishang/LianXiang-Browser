@@ -65,10 +65,7 @@ func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browser
 	for attempt := 1; attempt <= plan.maxStartAttempts; attempt++ {
 		stableDebugPort, readyErr := waitBrowserDebugPortStable(plan.assignedDebugPort, plan.userDataDir, plan.startReadyTimeout, plan.startStableWindow, monitor)
 		if readyErr == nil {
-			a.markProfileRunningLocked(input.ProfileID, profile, cmd, cmd.Process.Pid, stableDebugPort, true, "")
-			if plan.extensionWarning != "" {
-				profile.RuntimeWarning = plan.extensionWarning
-			}
+			a.markProfileRunningLocked(input.ProfileID, profile, cmd, cmd.Process.Pid, stableDebugPort, true, joinBrowserStartWarnings(profile.RuntimeWarning, plan.extensionWarning))
 			a.setBrowserProcessMonitorLocked(input.ProfileID, monitor)
 			if plan.acquiredProxyBridge.valid() {
 				a.bindProfileProxyBridge(input.ProfileID, plan.acquiredProxyBridge)
@@ -77,10 +74,7 @@ func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browser
 			if len(plan.deferredStartTargets) > 0 {
 				deferredPlan := deferredStartTargetsPlan{targets: plan.deferredStartTargets, newTabs: plan.deferredStartNewTabs}
 				if err := openDeferredStartTargets(stableDebugPort, deferredPlan); err != nil {
-					warning := deferredStartTargetsWarning(plan.deferredStartTargets, err)
-					if plan.extensionWarning != "" {
-						warning = plan.extensionWarning + "；" + warning
-					}
+					warning := joinBrowserStartWarnings(profile.RuntimeWarning, deferredStartTargetsWarning(plan.deferredStartTargets, err))
 					profile.RuntimeWarning = warning
 					profile.LastError = ""
 					log.Warn("浏览器已就绪，但启动页延后打开失败",
@@ -91,6 +85,22 @@ func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browser
 						logger.F("warning", warning),
 					)
 				}
+			}
+
+			// Chrome 137+ 已移除 --load-extension，插件只能靠 CDP 的
+			// Extensions.loadUnpacked 补加载；旧内核走这一支会直接跳过。
+			if extensionWarning := a.ensureProfileExtensionsLoaded(input.ProfileID, stableDebugPort, plan.extensionPaths); extensionWarning != "" {
+				a.browserMgr.Mutex.Lock()
+				if current, ok := a.browserMgr.Profiles[input.ProfileID]; ok && current != nil {
+					current.RuntimeWarning = joinBrowserStartWarnings(current.RuntimeWarning, extensionWarning)
+					profile.RuntimeWarning = current.RuntimeWarning
+				}
+				a.browserMgr.Mutex.Unlock()
+				log.Warn("实例已启动，但插件加载不完整",
+					logger.F("profile_id", input.ProfileID),
+					logger.F("debug_port", stableDebugPort),
+					logger.F("warning", extensionWarning),
+				)
 			}
 
 			log.Info("实例启动",
@@ -147,10 +157,7 @@ func (a *App) startBrowserProfileWithPlan(input browserStartInput, plan *browser
 
 	pendingAttach := shouldKeepBrowserRunningPendingDebugReady(plan.assignedDebugPort, monitor)
 	if pendingAttach {
-		runtimeWarning := browserDebugPendingWarning(plan.totalReadyTimeout)
-		if plan.extensionWarning != "" {
-			runtimeWarning = runtimeWarning + "；" + plan.extensionWarning
-		}
+		runtimeWarning := joinBrowserStartWarnings(profile.RuntimeWarning, browserDebugPendingWarning(plan.totalReadyTimeout), plan.extensionWarning)
 		a.markProfileRunningLocked(input.ProfileID, profile, cmd, cmd.Process.Pid, plan.assignedDebugPort, false, runtimeWarning)
 		a.setBrowserProcessMonitorLocked(input.ProfileID, monitor)
 		if len(plan.deferredStartTargets) > 0 {

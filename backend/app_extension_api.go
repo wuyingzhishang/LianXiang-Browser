@@ -80,7 +80,27 @@ func (a *App) BrowserExtensionInstallWithProxy(input BrowserExtensionWebStoreReq
 	if err != nil {
 		return BrowserExtension{}, fmt.Errorf("下载代理配置错误: %w", err)
 	}
-	return a.browserMgr.InstallExtensionFromWebStoreWithHTTPClient(a.ctx, input.Query, client)
+	return a.browserMgr.InstallExtensionFromWebStoreWithHTTPClient(a.ctx, input.Query, client, a.builtinConflictDialogHandler())
+}
+
+// builtinConflictDialogHandler 安装遇到同名同版本内置插件时，弹原生询问框让用户决定是否替换。
+// 无界面上下文（自动化等场景）时返回 nil：冲突直接取消安装并给出明确错误。
+func (a *App) builtinConflictDialogHandler() browser.BuiltinConflictHandler {
+	if a.ctx == nil {
+		return nil
+	}
+	return func(conflict browser.Extension) bool {
+		selection, err := wailsruntime.MessageDialog(a.ctx, wailsruntime.MessageDialogOptions{
+			Type:    "question",
+			Title:   "替换内置插件",
+			Message: fmt.Sprintf("已存在内置插件「%s」v%s。是否用本次安装替换它？\n\n替换后实例绑定会迁移到新版本，内置版本不再随应用启动登记。", conflict.Name, conflict.Version),
+		})
+		if err != nil {
+			return false
+		}
+		normalized := strings.ToLower(strings.TrimSpace(selection))
+		return normalized == "yes" || normalized == "ok" || normalized == "replace" || strings.Contains(normalized, "替换") || strings.Contains(normalized, "是")
+	}
 }
 
 func (a *App) BrowserExtensionManualInstallGuide(query string) (BrowserExtensionManualInstallGuide, error) {
@@ -157,7 +177,7 @@ func (a *App) BrowserExtensionInstallManualDownloadFile(fileName string) (Browse
 	if err != nil {
 		return BrowserExtension{}, err
 	}
-	return a.browserMgr.InstallExtensionPackageFile(path)
+	return a.browserMgr.InstallExtensionPackageFile(path, a.builtinConflictDialogHandler())
 }
 
 func (a *App) extensionManualDownloadDir() string {
@@ -215,7 +235,7 @@ func (a *App) extensionDownloadHTTPClient(useProxy bool, proxyConfig string) (*h
 		connectorType = a.config.Browser.DefaultConnectorType
 	}
 	log.Info("Chrome 插件下载使用代理", logger.F("connector", connectorType), logger.F("proxy_prefix", proxyConfigLogPrefix(proxyConfig)))
-	return proxy.BuildProxyHTTPClient(proxyConfig, "", proxies, a.xrayMgr, a.singboxMgr, a.clashMgr, connectorType, browser.ExtensionDownloadTimeout())
+	return proxy.BuildProxyHTTPClient(proxyConfig, "", proxies, a.xrayMgr, a.singboxMgr, a.clashMgr, a.mieruMgr, connectorType, browser.ExtensionDownloadTimeout())
 }
 
 func proxyConfigLogPrefix(proxyConfig string) string {
@@ -248,7 +268,7 @@ func (a *App) BrowserExtensionInstallLocalFile() (BrowserExtension, error) {
 	if strings.TrimSpace(path) == "" {
 		return BrowserExtension{}, fmt.Errorf("已取消选择")
 	}
-	return a.browserMgr.InstallExtensionPackageFile(path)
+	return a.browserMgr.InstallExtensionPackageFile(path, a.builtinConflictDialogHandler())
 }
 
 func (a *App) BrowserExtensionInstallLocalDirectory() (BrowserExtension, error) {
@@ -268,7 +288,7 @@ func (a *App) BrowserExtensionInstallLocalDirectory() (BrowserExtension, error) 
 	if strings.TrimSpace(path) == "" {
 		return BrowserExtension{}, fmt.Errorf("已取消选择")
 	}
-	return a.browserMgr.InstallExtensionDirectory(path)
+	return a.browserMgr.InstallExtensionDirectory(path, a.builtinConflictDialogHandler())
 }
 
 func (a *App) BrowserExtensionSetEnabled(extensionID string, enabled bool) (BrowserExtension, error) {
@@ -282,14 +302,10 @@ func (a *App) BrowserExtensionSetEnabled(extensionID string, enabled bool) (Brow
 	if extensionID == "" {
 		return BrowserExtension{}, fmt.Errorf("插件 ID 不能为空")
 	}
+	// 插件改为启动参数加载后，停用只需要改状态位：运行中的实例保持已加载，
+	// 下次启动不再注入。原先逐个实例清理代码目录的遍历没有意义且很慢，已移除。
 	if err := a.browserMgr.ExtensionDAO.SetEnabled(extensionID, enabled); err != nil {
 		return BrowserExtension{}, err
-	}
-	if !enabled {
-		if err := a.browserMgr.RemoveExtensionFromStoppedProfiles(extensionID); err != nil {
-			_ = a.browserMgr.ExtensionDAO.SetEnabled(extensionID, true)
-			return BrowserExtension{}, err
-		}
 	}
 	return a.browserMgr.ExtensionDAO.Get(extensionID)
 }
@@ -321,14 +337,32 @@ func (a *App) BrowserExtensionDelete(extensionID string) error {
 	if extensionID == "" {
 		return fmt.Errorf("插件 ID 不能为空")
 	}
+	a.sweepBrowserExtensionDeleteStaging()
 	extension, err := a.browserMgr.ExtensionDAO.Get(extensionID)
 	if err != nil {
-		return err
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		// 记录已不存在（此前删除可能已完成但前端未同步到列表）：幂等删除。
+		// 清掉可能残留的本地目录与安装包后返回成功，让前端移除卡片，
+		// 否则卡片永远留在列表里，用户点删除只会一直报错。
+		log := logger.New("Extension")
+		log.Warn("插件记录已不存在，执行幂等清理", logger.F("extension_id", extensionID))
+		return a.cleanupOrphanExtensionFiles(extensionID)
 	}
 	if _, err := a.resolveBrowserExtensionInstallDir(extension.InstallDir); err != nil {
 		return err
 	}
-	if err := a.browserMgr.RemoveExtensionFromStoppedProfiles(extensionID); err != nil {
+	// 旧版注册表清理属于尽力而为的家务活：失败只记录告警，不阻止删除。
+	// 此前这里失败会永久阻塞删除（迁移错误被 once 缓存到进程退出为止）。
+	if err := a.browserMgr.MigrateLegacyExternalExtensionRegistry(); err != nil {
+		logger.New("Extension").Warn("迁移旧版插件外部注册失败，继续执行删除",
+			logger.F("error", err.Error()),
+			logger.F("extension_id", extensionID),
+		)
+	}
+	// 只按配置判断是否有运行中的实例正在使用它，不再遍历实例目录。
+	if err := a.browserMgr.EnsureExtensionUnusedByRunningProfiles(extensionID); err != nil {
 		return err
 	}
 	deletionStage, err := a.stageBrowserExtensionDeletion(extension)
@@ -342,7 +376,51 @@ func (a *App) BrowserExtensionDelete(extensionID string) error {
 		return err
 	}
 	if err := deletionStage.cleanup(); err != nil {
-		return fmt.Errorf("插件记录已删除，但清理删除暂存失败：%w", err)
+		// 记录与文件均已删除，暂存清理失败只记录告警。若把错误抛回前端，
+		// 前端会保留卡片而记录已删，用户后续点删除只会得到"记录不存在"。
+		logger.New("Extension").Warn("插件记录已删除，但清理删除暂存失败",
+			logger.F("error", err.Error()),
+			logger.F("root", deletionStage.root),
+		)
+	}
+	return nil
+}
+
+// sweepBrowserExtensionDeleteStaging 尽力清理历史删除暂存残留（删除已完成但暂存未清掉的目录）。
+func (a *App) sweepBrowserExtensionDeleteStaging() {
+	root := a.resolveAppPath(filepath.ToSlash(filepath.Join("data", "extensions", ".delete-staging")))
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		_ = os.RemoveAll(filepath.Join(root, entry.Name()))
+	}
+}
+
+// cleanupOrphanExtensionFiles 清理记录已丢失但磁盘可能残留的插件目录与安装包（尽力而为）。
+func (a *App) cleanupOrphanExtensionFiles(extensionID string) error {
+	extensionID = strings.TrimSpace(extensionID)
+	if extensionID == "" {
+		return nil
+	}
+	candidates := []string{
+		a.resolveAppPath(filepath.ToSlash(filepath.Join("data", "extensions", extensionID))),
+		a.resolveAppPath(filepath.ToSlash(filepath.Join("data", "extensions", "packages", extensionID+".crx"))),
+		a.resolveAppPath(filepath.ToSlash(filepath.Join("data", "extensions", "packages", extensionID+".zip"))),
+	}
+	for _, candidate := range candidates {
+		resolved, err := a.resolveBrowserExtensionInstallDir(candidate)
+		if err != nil || resolved == "" {
+			// 越界或非法路径直接跳过，不影响幂等删除的成功语义。
+			continue
+		}
+		if err := os.RemoveAll(resolved); err != nil {
+			return fmt.Errorf("清理插件残留文件失败: %w", err)
+		}
 	}
 	return nil
 }
@@ -506,5 +584,5 @@ func (a *App) BrowserProfileExtensionSave(profileID string, extensionIDs []strin
 	if a.browserMgr == nil || a.browserMgr.ExtensionDAO == nil {
 		return BrowserProfileExtensionSettings{}, fmt.Errorf("插件管理器未初始化")
 	}
-	return a.browserMgr.ExtensionDAO.SetProfileSettings(profileID, extensionIDs, configured)
+	return a.browserMgr.SaveProfileExtensionSettings(profileID, extensionIDs, configured)
 }

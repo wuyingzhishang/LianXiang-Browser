@@ -479,4 +479,4 @@ Windows 升级或卸载旧版本时，安装器会先将旧安装目录中的 `b
 
 ## License
 
-当前仓库暂未附带独立的 `LICENSE` 文件，后续会补充。
+本项目源代码使用 [PolyForm Noncommercial License 1.0.0](LICENSE)。该许可仅授予非商业用途，商业使用不在许可范围内。第三方依赖和运行时文件按各自许可证执行。

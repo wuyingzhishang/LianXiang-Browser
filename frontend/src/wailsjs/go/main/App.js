@@ -450,6 +450,10 @@ export function BrowserProfilePackageExport(arg1) {
   return window['go']['main']['App']['BrowserProfilePackageExport'](arg1);
 }
 
+export function BrowserProfilePackageExportWithOptions(arg1, arg2) {
+  return window['go']['main']['App']['BrowserProfilePackageExportWithOptions'](arg1, arg2);
+}
+
 export function BrowserProfilePackageImport() {
   return window['go']['main']['App']['BrowserProfilePackageImport']();
 }
@@ -496,6 +500,10 @@ export function BrowserProfileTrashList() {
 
 export function BrowserProfileUpdate(arg1, arg2) {
   return window['go']['main']['App']['BrowserProfileUpdate'](arg1, arg2);
+}
+
+export function BrowserProxyAlignRecords(arg1) {
+  return window['go']['main']['App']['BrowserProxyAlignRecords'](arg1);
 }
 
 export function BrowserProxyBatchCheckIPHealth(arg1, arg2) {
@@ -558,12 +566,40 @@ export function BrowserProxyProbeBrowserPage(arg1) {
   return window['go']['main']['App']['BrowserProxyProbeBrowserPage'](arg1);
 }
 
+export function BrowserProxyRefreshSource(arg1, arg2) {
+  return window['go']['main']['App']['BrowserProxyRefreshSource'](arg1, arg2);
+}
+
 export function BrowserProxyResolveLocation(arg1) {
   return window['go']['main']['App']['BrowserProxyResolveLocation'](arg1);
 }
 
+export function BrowserProxySetSourceIgnoredNames(arg1, arg2) {
+  return window['go']['main']['App']['BrowserProxySetSourceIgnoredNames'](arg1, arg2);
+}
+
 export function BrowserProxyTestSpeed(arg1) {
   return window['go']['main']['App']['BrowserProxyTestSpeed'](arg1);
+}
+
+export function BrowserProxyUpdateSourceConfig(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['BrowserProxyUpdateSourceConfig'](arg1, arg2, arg3, arg4);
+}
+
+export function BrowserProxyVirtualGroupHealthList() {
+  return window['go']['main']['App']['BrowserProxyVirtualGroupHealthList']();
+}
+
+export function BrowserProxyVirtualGroupList() {
+  return window['go']['main']['App']['BrowserProxyVirtualGroupList']();
+}
+
+export function BrowserProxyVirtualGroupProbe(arg1) {
+  return window['go']['main']['App']['BrowserProxyVirtualGroupProbe'](arg1);
+}
+
+export function BrowserProxyVirtualGroupResetHealth(arg1) {
+  return window['go']['main']['App']['BrowserProxyVirtualGroupResetHealth'](arg1);
 }
 
 export function BrowserProxyWarmupBridge(arg1) {
@@ -576,6 +612,10 @@ export function BrowserProxyWarmupBridgeWithConfig(arg1, arg2) {
 
 export function BrowserRenameTag(arg1, arg2) {
   return window['go']['main']['App']['BrowserRenameTag'](arg1, arg2);
+}
+
+export function BrowserSetCookies(arg1, arg2) {
+  return window['go']['main']['App']['BrowserSetCookies'](arg1, arg2);
 }
 
 export function BrowserSnapshotCreate(arg1, arg2) {
@@ -592,6 +632,10 @@ export function BrowserSnapshotList(arg1) {
 
 export function BrowserSnapshotRestore(arg1, arg2) {
   return window['go']['main']['App']['BrowserSnapshotRestore'](arg1, arg2);
+}
+
+export function CheckForUpdates() {
+  return window['go']['main']['App']['CheckForUpdates']();
 }
 
 export function ClearAppLogs() {
@@ -740,6 +784,10 @@ export function SaveAutomationSettings(arg1, arg2) {
 
 export function SaveBrowserProxies(arg1) {
   return window['go']['main']['App']['SaveBrowserProxies'](arg1);
+}
+
+export function SaveBrowserProxyVirtualGroup(arg1) {
+  return window['go']['main']['App']['SaveBrowserProxyVirtualGroup'](arg1);
 }
 
 export function SaveBrowserSettings(arg1) {

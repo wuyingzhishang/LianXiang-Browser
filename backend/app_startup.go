@@ -64,7 +64,7 @@ func (a *App) startup(ctx context.Context) {
 	a.startupInitInterceptor(log, cfg)
 	phases.mark("backup_cores_restore")
 
-	db, err := a.startupInitDatabase(cfg)
+	db, recovery, err := a.startupInitDatabase(cfg)
 	if err != nil {
 		log.Error("初始化数据库失败", logger.F("error", err))
 		runtime.LogFatal(ctx, fmt.Sprintf("初始化数据库失败: %v", err))
@@ -356,16 +356,43 @@ func (a *App) startupInitInterceptor(log *logger.Logger, cfg *config.Config) {
 	a.interceptor = logger.NewMethodInterceptor(log, interceptorConfig)
 }
 
-func (a *App) startupInitDatabase(cfg *config.Config) (*database.DB, error) {
-	return database.NewDB(a.resolveAppPath(cfg.Database.SQLite.Path))
+func (a *App) startupInitDatabase(cfg *config.Config) (*database.DB, database.RecoveryInfo, error) {
+	return database.OpenWithRecovery(
+		a.resolveAppPath(cfg.Database.SQLite.Path),
+		a.resolveAppPath("data/db-backups"),
+	)
 }
 
-func (a *App) startupInitManagers(cfg *config.Config, db *database.DB) {
+// reportDatabaseRecovery 把数据库自愈结果写进日志并广播给前端，避免数据被重置后无人知晓。
+func (a *App) reportDatabaseRecovery(log *logger.Logger, recovery database.RecoveryInfo) {
+	if recovery.MigrationBackup != "" {
+		log.Info("数据库升级前已创建备份", logger.F("path", recovery.MigrationBackup))
+	}
+	if !recovery.Recovered {
+		return
+	}
+	log.Error("数据库无法使用，已自动备份并重建空库（历史实例/代理/插件数据未恢复）",
+		logger.F("reason", recovery.Reason),
+		logger.F("backup", recovery.BrokenBackupPath),
+		logger.F("parked", recovery.BrokenParkedPath))
+	a.emitRuntimeEvent("app:db-recovered", map[string]any{
+		"reason":       recovery.Reason,
+		"backup_path":  recovery.BrokenBackupPath,
+		"parked_path":  recovery.BrokenParkedPath,
+		"recovered":    true,
+	})
+}
+
+func (a *App) startupInitManagers(cfg *config.Config, db *database.DB) error {
 	a.browserMgr = browser.NewManager(cfg, a.appRoot)
 	a.browserMgr.EventEmitter = a.emitRuntimeEvent
+	a.browserMgr.ProfileRuntimeDetector = func(profile *browser.Profile) bool {
+		return browserProfileHasRuntime(a, profile, nil)
+	}
 	a.xrayMgr = proxy.NewXrayManager(cfg, a.appRoot)
 	a.clashMgr = proxy.NewClashManager(cfg, a.appRoot)
 	a.singboxMgr = proxy.NewSingBoxManager(cfg, a.appRoot)
+	a.mieruMgr = proxy.NewMieruManager(cfg, a.appRoot)
 	a.browserMgr.CoreDownloadHTTPClientFactory = func(proxyConfig string, timeout time.Duration) (*http.Client, error) {
 		client, _, err := a.unifiedProxyCoreHTTPClient(timeout, proxyConfig)
 		return client, err
@@ -374,17 +401,24 @@ func (a *App) startupInitManagers(cfg *config.Config, db *database.DB) {
 	conn := db.GetConn()
 	a.browserMgr.ProfileDAO = browser.NewSQLiteProfileDAO(conn)
 	a.browserMgr.ProxyDAO = browser.NewSQLiteProxyDAO(conn)
+	a.browserMgr.ProxyVirtualGroupDAO = browser.NewSQLiteProxyVirtualGroupDAO(conn)
+	a.browserMgr.ProxyVirtualGroupMemberStateDAO = browser.NewSQLiteProxyVirtualGroupMemberStateDAO(conn)
 	a.browserMgr.CoreDAO = browser.NewSQLiteCoreDAO(conn)
 	a.browserMgr.BookmarkDAO = browser.NewSQLiteBookmarkDAO(conn)
 	a.browserMgr.GroupDAO = browser.NewSQLiteGroupDAO(conn)
 	a.browserMgr.ExtensionDAO = browser.NewSQLiteExtensionDAO(conn)
 
-	a.migrateToSQLite()
+	if err := a.migrateToSQLite(); err != nil {
+		return err
+	}
 
 	a.browserMgr.InitData()
 	a.autoDetectCores()
-	a.loadProxies()
+	if err := a.loadProxies(); err != nil {
+		return err
+	}
 	a.reconcileProfileProxyBindings()
+	return nil
 }
 
 func (a *App) startupInitLaunchCode(log *logger.Logger) {
@@ -421,19 +455,20 @@ func (a *App) startupInitAutomation() {
 }
 
 func (a *App) startupInitBridgeHooks() {
-	a.xrayMgr.OnBridgeDied = func(key string, err error) {
-		a.emitRuntimeEvent("proxy:bridge:died", map[string]interface{}{
-			"engine": "xray",
-			"key":    bridgeEventKey(key),
-			"error":  errorMessage(err),
-		})
+	if a.xrayMgr != nil {
+		a.xrayMgr.OnBridgeDied = func(key string, err error) {
+			a.handleProxyBridgeDied(profileProxyBridgeEngineXray, key, err)
+		}
 	}
-	a.singboxMgr.OnBridgeDied = func(key string, err error) {
-		a.emitRuntimeEvent("proxy:bridge:died", map[string]interface{}{
-			"engine": "singbox",
-			"key":    bridgeEventKey(key),
-			"error":  errorMessage(err),
-		})
+	if a.singboxMgr != nil {
+		a.singboxMgr.OnBridgeDied = func(key string, err error) {
+			a.handleProxyBridgeDied(profileProxyBridgeEngineSingBox, key, err)
+		}
+	}
+	if a.clashMgr != nil {
+		a.clashMgr.OnNodeBridgeDied = func(key string, err error) {
+			a.handleProxyBridgeDied(profileProxyBridgeEngineMihomo, key, err)
+		}
 	}
 }
 
@@ -459,17 +494,56 @@ func (a *App) ensureSpeedScheduler() {
 	if a == nil || a.config == nil || a.browserMgr == nil || a.browserMgr.ProxyDAO == nil {
 		return
 	}
+	interval, failureRetry, schedulerConcurrency := a.proxySpeedSchedule()
 	if a.speedScheduler == nil {
-		a.speedScheduler = browser.NewProxySpeedScheduler(
+		a.speedScheduler = browser.NewProxySpeedSchedulerWithRetry(
 			a.browserMgr.ProxyDAO,
-			func(proxyId string) (bool, int64, string) {
-				connectorType := config.NormalizeBrowserConnectorType(a.config.Browser.DefaultConnectorType)
-				r := a.testProxySpeedWithConnector(proxyId, a.getLatestProxies(), connectorType)
-				return r.Ok, r.LatencyMs, r.Error
-			},
-			browser.DefaultProxySpeedInterval,
-			browser.DefaultProxySpeedConcurrency,
+			nil,
+			interval,
+			failureRetry,
+			schedulerConcurrency,
 		)
+		a.speedScheduler.SetProxySpeedTestFunc(func(item browser.Proxy) (bool, int64, string) {
+			result := a.testSharedProxySpeed(item.ProxyId, true)
+			a.emitRuntimeEvent("proxy:speed:result", result)
+			return result.Ok, result.LatencyMs, result.Error
+		})
+		a.speedScheduler.SetResultCurrentFunc(func(item browser.Proxy, proxies []browser.Proxy) bool {
+			return a.proxySpeedResultIsCurrent(item, proxies)
+		})
+		a.speedScheduler.SetResultPersistence(false)
+		a.speedScheduler.SetPriorityFunc(func(item browser.Proxy) int {
+			return a.virtualGroupProbePriority(item.ProxyId)
+		})
+		a.speedScheduler.SetIntervalFunc(func(item browser.Proxy) time.Duration {
+			return a.virtualGroupProbeIntervalFor(item.ProxyId)
+		})
+		a.speedScheduler.SetProbeGateFunc(func(item browser.Proxy, checkedAt time.Time) bool {
+			return a.virtualGroupProbeGate(item.ProxyId, checkedAt)
+		})
 	}
 	a.speedScheduler.Start()
+}
+
+func (a *App) proxySpeedSchedule() (time.Duration, time.Duration, int) {
+	settings := config.DefaultConfig().ProxyCheck
+	if a != nil && a.config != nil {
+		settings = a.config.ProxyCheck
+	}
+	settings = proxy.NormalizeCheckSettings(settings)
+	interval := time.Duration(settings.SpeedIntervalMinutes) * time.Minute
+	failureRetry := time.Duration(settings.FailureRetryMinutes) * time.Minute
+	concurrency := settings.SpeedConcurrency
+	return interval, failureRetry, concurrency
+}
+
+func (a *App) restartSpeedScheduler() {
+	if a == nil {
+		return
+	}
+	if a.speedScheduler != nil {
+		a.speedScheduler.Stop()
+		a.speedScheduler = nil
+	}
+	a.ensureSpeedScheduler()
 }

@@ -81,6 +81,7 @@ profiles.yaml
 # Frontend deps/cache
 frontend/node_modules/
 frontend/dist/
+frontend/dist_stub/
 frontend/.vite/
 
 # Python cache
@@ -94,6 +95,9 @@ __pycache__/
 coverage/
 *.out
 tmp-debug-port*/
+
+# Manual acceptance test scripts (local only)
+backend/manual_*_test.go
 
 # Env files
 .env

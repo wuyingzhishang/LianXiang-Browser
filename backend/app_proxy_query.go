@@ -13,29 +13,44 @@ func (a *App) BrowserProxyList() []BrowserProxy {
 	if a == nil || !a.waitReady(startupReadyWait) || a.browserMgr == nil || a.browserMgr.ProxyDAO == nil || a.config == nil {
 		return []BrowserProxy{}
 	}
-	return browser.ListProxiesWithFallback(a.browserMgr.ProxyDAO, a.config.Browser.Proxies)
+	proxies, err := browser.LoadLatestProxiesWithFallback(a.browserMgr.ProxyDAO, a.config.Browser.Proxies)
+	if err != nil {
+		return nil, err
+	}
+	return proxies, nil
 }
 
 // BrowserProxyListGroups 获取所有代理分组名称
-func (a *App) BrowserProxyListGroups() []string {
-	if a == nil || a.browserMgr == nil || a.browserMgr.ProxyDAO == nil {
-		return []string{}
+func (a *App) BrowserProxyListGroups() ([]string, error) {
+	if a == nil || a.browserMgr == nil || a.config == nil {
+		return nil, fmt.Errorf("代理数据加载上下文不可用")
 	}
-	return browser.ListProxyGroups(a.browserMgr.ProxyDAO)
+	return browser.LoadProxyGroupsWithFallback(a.browserMgr.ProxyDAO, a.config.Browser.Proxies)
 }
 
 // BrowserProxyListByGroup 按分组名称查询代理
-func (a *App) BrowserProxyListByGroup(groupName string) []BrowserProxy {
-	if a == nil || a.browserMgr == nil || a.browserMgr.ProxyDAO == nil || a.config == nil {
-		return []BrowserProxy{}
+func (a *App) BrowserProxyListByGroup(groupName string) ([]BrowserProxy, error) {
+	if a == nil || a.browserMgr == nil || a.config == nil {
+		return nil, fmt.Errorf("代理数据加载上下文不可用")
 	}
-	return browser.ListProxiesByGroupWithFallback(a.browserMgr.ProxyDAO, groupName, a.config.Browser.Proxies)
+	proxies, err := browser.LoadProxiesByGroupWithFallback(a.browserMgr.ProxyDAO, groupName, a.config.Browser.Proxies)
+	if err != nil {
+		return nil, err
+	}
+	return proxies, nil
 }
 
 // ValidateProxyConfig 验证代理配置是否支持
 func (a *App) ValidateProxyConfig(proxyConfig string, proxyId string) ProxyValidationResult {
 	proxies := a.getLatestProxies()
-	supported, errorMsg := proxy.ValidateProxyConfig(proxyConfig, proxies, proxyId)
+	// 虚拟分组绑定：用成员配置校验（需桥接的成员按成员内核校验）
+	if strings.TrimSpace(proxyConfig) == "" {
+		if memberID, memberConfig, picked := a.resolveVirtualGroupProxyTarget(strings.TrimSpace(proxyId), proxies); picked {
+			proxyId = memberID
+			proxyConfig = memberConfig
+		}
+	}
+	supported, errorMsg := proxy.ValidateProxyConfigWithConnector(proxyConfig, proxies, proxyId, a.defaultProxyConnectorType())
 	return ProxyValidationResult{
 		Supported: supported,
 		ErrorMsg:  errorMsg,
@@ -57,7 +72,7 @@ func (a *App) TestProxyConnectivity(proxyId string, proxyConfig string) ProxyTes
 func (a *App) TestProxyRealConnectivity(proxyId string) ProxyTestResult {
 	proxies := a.getLatestProxies()
 	connectorType := config.NormalizeBrowserConnectorType(a.config.Browser.DefaultConnectorType)
-	result := proxy.TestRealConnectivityWithRuntimeConfig(proxyId, proxies, a.xrayMgr, a.singboxMgr, a.clashMgr, connectorType, a.proxySpeedTestConfig())
+	result := proxy.TestRealConnectivityWithRuntimeConfig(proxyId, proxies, a.xrayMgr, a.singboxMgr, a.clashMgr, a.mieruMgr, connectorType, a.proxySpeedTestConfig())
 	return buildProxyTestResult(result)
 }
 
@@ -112,8 +127,16 @@ func (a *App) BrowserProxyBatchWarmupBridge(proxyIds []string, concurrency int) 
 
 func (a *App) warmupProxyBridge(proxyId string, proxyConfig string, proxies []BrowserProxy) ProxyBridgeWarmupResult {
 	startedAt := time.Now()
+	requestedProxyId := strings.TrimSpace(proxyId)
+	// 虚拟分组绑定：预热目标映射为本次选中的成员代理
+	if strings.TrimSpace(proxyConfig) == "" {
+		if memberID, memberConfig, picked := a.resolveVirtualGroupProxyTarget(requestedProxyId, proxies); picked {
+			proxyId = memberID
+			proxyConfig = memberConfig
+		}
+	}
+	result := ProxyBridgeWarmupResult{ProxyId: requestedProxyId}
 	proxyId = strings.TrimSpace(proxyId)
-	result := ProxyBridgeWarmupResult{ProxyId: proxyId}
 	src := strings.TrimSpace(resolveProxyConfigForApp(proxyConfig, proxies, proxyId))
 	if src == "" {
 		result.Error = "代理配置为空"
@@ -152,6 +175,13 @@ func (a *App) warmupProxyBridge(proxyId string, proxyConfig string, proxies []Br
 			return result
 		}
 		socksURL, err = a.singboxMgr.EnsureBridge(src, proxies, proxyId)
+	case proxy.ProxyKernelMieru:
+		if a.mieruMgr == nil {
+			result.Error = "mieru 管理器不可用，请先下载 mieru 内核"
+			result.LatencyMs = time.Since(startedAt).Milliseconds()
+			return result
+		}
+		socksURL, err = a.mieruMgr.EnsureBridgeContext(context.Background(), src, proxies, proxyId)
 	case proxy.ProxyKernelXray:
 		if a.xrayMgr == nil {
 			result.Error = "xray 管理器不可用"

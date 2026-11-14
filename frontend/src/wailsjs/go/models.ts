@@ -733,6 +733,7 @@ export namespace backend {
 	    value: string;
 	    domain: string;
 	    path: string;
+	    url?: string;
 	    expires: number;
 	    httpOnly: boolean;
 	    secure: boolean;
@@ -748,10 +749,30 @@ export namespace backend {
 	        this.value = source["value"];
 	        this.domain = source["domain"];
 	        this.path = source["path"];
+	        this.url = source["url"];
 	        this.expires = source["expires"];
 	        this.httpOnly = source["httpOnly"];
 	        this.secure = source["secure"];
 	        this.sameSite = source["sameSite"];
+	        this.priority = source["priority"];
+	        this.sameParty = source["sameParty"];
+	        this.sourceScheme = source["sourceScheme"];
+	        this.sourcePort = source["sourcePort"];
+	        this.hostOnly = source["hostOnly"];
+	        this.session = source["session"];
+	        this.partitionKey = source["partitionKey"];
+	    }
+	}
+	export class ProfilePackageExportOptions {
+	    portableSessionPassword?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfilePackageExportOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.portableSessionPassword = source["portableSessionPassword"];
 	    }
 	}
 	export class DataDirectoryInfo {
@@ -829,6 +850,8 @@ export namespace backend {
 	    zipPath: string;
 	    profileCount: number;
 	    fileCount: number;
+	    portableSessionProfileCount?: number;
+	    portableSessionWarning?: string;
 	    message: string;
 	
 	    static createFrom(source: any = {}) {
@@ -841,6 +864,8 @@ export namespace backend {
 	        this.zipPath = source["zipPath"];
 	        this.profileCount = source["profileCount"];
 	        this.fileCount = source["fileCount"];
+	        this.portableSessionProfileCount = source["portableSessionProfileCount"];
+	        this.portableSessionWarning = source["portableSessionWarning"];
 	        this.message = source["message"];
 	    }
 	}
@@ -908,6 +933,7 @@ export namespace backend {
 	        this.actions = this.convertValues(source["actions"], ProfilePackageImportAction);
 	        this.conflictMode = source["conflictMode"];
 	        this.confirmConflict = source["confirmConflict"];
+	        this.portableSessionPassword = source["portableSessionPassword"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -976,6 +1002,8 @@ export namespace backend {
 	    conflictCount: number;
 	    canOverwrite: boolean;
 	    conflicts: ProfilePackageImportConflict[];
+	    portableSessionAvailable: boolean;
+	    portableSessionProfileCount: number;
 	    message: string;
 	
 	    static createFrom(source: any = {}) {
@@ -991,6 +1019,8 @@ export namespace backend {
 	        this.conflictCount = source["conflictCount"];
 	        this.canOverwrite = source["canOverwrite"];
 	        this.conflicts = this.convertValues(source["conflicts"], ProfilePackageImportConflict);
+	        this.portableSessionAvailable = source["portableSessionAvailable"];
+	        this.portableSessionProfileCount = source["portableSessionProfileCount"];
 	        this.message = source["message"];
 	    }
 	
@@ -1317,6 +1347,8 @@ export namespace backend {
 	        this.latencyMs = source["latencyMs"];
 	        this.engine = source["engine"];
 	        this.error = source["error"];
+	        this.fingerprint = source["fingerprint"];
+	        this.testedAt = source["testedAt"];
 	    }
 	}
 	export class ProxyValidationResult {
@@ -1342,17 +1374,20 @@ export namespace backend {
 	    filePath?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new SnapshotInfo(source);
+	        return new ProxyVirtualGroupMemberHealth(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.snapshotId = source["snapshotId"];
-	        this.profileId = source["profileId"];
-	        this.name = source["name"];
-	        this.sizeMB = source["sizeMB"];
-	        this.createdAt = source["createdAt"];
-	        this.filePath = source["filePath"];
+	        this.proxyId = source["proxyId"];
+	        this.proxyName = source["proxyName"];
+	        this.groupName = source["groupName"];
+	        this.state = source["state"];
+	        this.latencyMs = source["latencyMs"];
+	        this.lastProbeAt = source["lastProbeAt"];
+	        this.lastError = source["lastError"];
+	        this.active = source["active"];
+	        this.preferred = source["preferred"];
 	    }
 	}
 
@@ -1373,21 +1408,23 @@ export namespace backup {
 	    description?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new ManifestEntry(source);
+	        return new ProxyVirtualGroupHealth(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.category = source["category"];
-	        this.entryType = source["entryType"];
-	        this.required = source["required"];
-	        this.coreId = source["coreId"];
-	        this.archivePath = source["archivePath"];
-	        this.fileCount = source["fileCount"];
-	        this.byteSize = source["byteSize"];
-	        this.sha256 = source["sha256"];
-	        this.description = source["description"];
+	        this.groupId = source["groupId"];
+	        this.groupName = source["groupName"];
+	        this.strategy = source["strategy"];
+	        this.activeProxyId = source["activeProxyId"];
+	        this.preferredProxyId = source["preferredProxyId"];
+	        this.total = source["total"];
+	        this.healthy = source["healthy"];
+	        this.suspect = source["suspect"];
+	        this.degraded = source["degraded"];
+	        this.allDegraded = source["allDegraded"];
+	        this.members = this.convertValues(source["members"], ProxyVirtualGroupMemberHealth);
+	        this.updatedAt = source["updatedAt"];
 	    }
 	}
 	export class ManifestAppInfo {
@@ -1694,8 +1731,10 @@ export namespace browser {
 	    coreId: string;
 	    restoreLastSession: string;
 	    fingerprintArgs: string[];
+	    proxyMode: string;
 	    proxyId: string;
 	    proxyConfig: string;
+	    proxyGroupName: string;
 	    proxyBindSourceId: string;
 	    proxyBindSourceUrl: string;
 	    proxyBindName: string;
@@ -1732,8 +1771,10 @@ export namespace browser {
 	        this.coreId = source["coreId"];
 	        this.restoreLastSession = source["restoreLastSession"];
 	        this.fingerprintArgs = source["fingerprintArgs"];
+	        this.proxyMode = source["proxyMode"];
 	        this.proxyId = source["proxyId"];
 	        this.proxyConfig = source["proxyConfig"];
+	        this.proxyGroupName = source["proxyGroupName"];
 	        this.proxyBindSourceId = source["proxyBindSourceId"];
 	        this.proxyBindSourceUrl = source["proxyBindSourceUrl"];
 	        this.proxyBindName = source["proxyBindName"];
@@ -1797,8 +1838,10 @@ export namespace browser {
 	    coreId: string;
 	    restoreLastSession: string;
 	    fingerprintArgs: string[];
+	    proxyMode: string;
 	    proxyId: string;
 	    proxyConfig: string;
+	    proxyGroupName: string;
 	    memoryLimitMb: number;
 	    launchArgs: string[];
 	    tags: string[];
@@ -1816,8 +1859,10 @@ export namespace browser {
 	        this.coreId = source["coreId"];
 	        this.restoreLastSession = source["restoreLastSession"];
 	        this.fingerprintArgs = source["fingerprintArgs"];
+	        this.proxyMode = source["proxyMode"];
 	        this.proxyId = source["proxyId"];
 	        this.proxyConfig = source["proxyConfig"];
+	        this.proxyGroupName = source["proxyGroupName"];
 	        this.memoryLimitMb = source["memoryLimitMb"];
 	        this.launchArgs = source["launchArgs"];
 	        this.tags = source["tags"];
@@ -1834,6 +1879,7 @@ export namespace browser {
 	    restoreLastSession: boolean;
 	    startReadyTimeoutMs: number;
 	    startStableWindowMs: number;
+	    maxConcurrentInstances: number;
 	    defaultConnectorType: string;
 	
 	    static createFrom(source: any = {}) {
@@ -1850,6 +1896,7 @@ export namespace browser {
 	        this.restoreLastSession = source["restoreLastSession"];
 	        this.startReadyTimeoutMs = source["startReadyTimeoutMs"];
 	        this.startStableWindowMs = source["startStableWindowMs"];
+	        this.maxConcurrentInstances = source["maxConcurrentInstances"];
 	        this.defaultConnectorType = source["defaultConnectorType"];
 	    }
 	}
@@ -1930,9 +1977,16 @@ export namespace config {
 	    sourceAutoRefresh?: boolean;
 	    sourceRefreshIntervalM?: number;
 	    sourceLastRefreshAt?: string;
+	    sourceFetchProxyId?: string;
+	    sourceLastRefreshError?: string;
+	    sourceMissing?: boolean;
+	    sourceMissingSince?: string;
 	    lastLatencyMs: number;
 	    lastTestOk: boolean;
 	    lastTestedAt: string;
+	    lastTestEngine?: string;
+	    lastTestConnectorType?: string;
+	    speedTestFingerprint: string;
 	    lastIPHealthJson?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -1954,10 +2008,47 @@ export namespace config {
 	        this.sourceAutoRefresh = source["sourceAutoRefresh"];
 	        this.sourceRefreshIntervalM = source["sourceRefreshIntervalM"];
 	        this.sourceLastRefreshAt = source["sourceLastRefreshAt"];
+	        this.sourceFetchProxyId = source["sourceFetchProxyId"];
+	        this.sourceLastRefreshError = source["sourceLastRefreshError"];
+	        this.sourceMissing = source["sourceMissing"];
+	        this.sourceMissingSince = source["sourceMissingSince"];
 	        this.lastLatencyMs = source["lastLatencyMs"];
 	        this.lastTestOk = source["lastTestOk"];
 	        this.lastTestedAt = source["lastTestedAt"];
+	        this.lastTestEngine = source["lastTestEngine"];
+	        this.lastTestConnectorType = source["lastTestConnectorType"];
+	        this.speedTestFingerprint = source["speedTestFingerprint"];
 	        this.lastIPHealthJson = source["lastIPHealthJson"];
+	    }
+	}
+	export class BrowserProxyVirtualGroup {
+	    groupId: string;
+	    groupName: string;
+	    strategy?: string;
+	    selectedProxyId?: string;
+	    preferredProxyId?: string;
+	    memberProxyIds?: string[];
+	    memberGroupNames?: string[];
+	    sortOrder?: number;
+	    createdAt?: string;
+	    updatedAt?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BrowserProxyVirtualGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groupId = source["groupId"];
+	        this.groupName = source["groupName"];
+	        this.strategy = source["strategy"];
+	        this.selectedProxyId = source["selectedProxyId"];
+	        this.preferredProxyId = source["preferredProxyId"];
+	        this.memberProxyIds = source["memberProxyIds"];
+	        this.memberGroupNames = source["memberGroupNames"];
+	        this.sortOrder = source["sortOrder"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
 	    }
 	}
 	export class ProxyCheckTarget {
@@ -1985,7 +2076,10 @@ export namespace config {
 	    }
 	}
 	export class ProxyCheckConfig {
+	    speedIntervalMinutes: number;
 	    bridgeStartTimeoutMs: number;
+	    failureRetryMinutes: number;
+	    speedConcurrency: number;
 	    speedTargetId: string;
 	    ipHealthTargetId: string;
 	    targets: ProxyCheckTarget[];
@@ -1996,10 +2090,20 @@ export namespace config {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.speedIntervalMinutes = source["speedIntervalMinutes"];
 	        this.bridgeStartTimeoutMs = source["bridgeStartTimeoutMs"];
+	        this.failureRetryMinutes = source["failureRetryMinutes"];
+	        this.speedConcurrency = source["speedConcurrency"];
 	        this.speedTargetId = source["speedTargetId"];
 	        this.ipHealthTargetId = source["ipHealthTargetId"];
 	        this.targets = this.convertValues(source["targets"], ProxyCheckTarget);
+	        this.virtualGroupHealthEnabled = source["virtualGroupHealthEnabled"];
+	        this.virtualGroupProbeIntervalMinutes = source["virtualGroupProbeIntervalMinutes"];
+	        this.degradeFailureThreshold = source["degradeFailureThreshold"];
+	        this.restoreSuccessThreshold = source["restoreSuccessThreshold"];
+	        this.runtimeFailoverEnabled = source["runtimeFailoverEnabled"];
+	        this.runtimeFailoverCooldownMinutes = source["runtimeFailoverCooldownMinutes"];
+	        this.runtimeFailoverMaxAttempts = source["runtimeFailoverMaxAttempts"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
