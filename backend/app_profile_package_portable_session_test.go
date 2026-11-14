@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestPortableProfileSessionRoundTrip(t *testing.T) {

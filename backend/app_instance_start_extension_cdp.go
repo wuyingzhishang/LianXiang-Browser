@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // Chrome 137 起移除了 --load-extension 命令行开关（Chrome for Developers 2025-06 公告：

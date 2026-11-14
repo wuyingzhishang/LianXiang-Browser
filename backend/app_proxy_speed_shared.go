@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
-	"ant-chrome/backend/internal/proxy"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
+	"lianxiang-browser/backend/internal/proxy"
 )
 
 func (a *App) testSharedProxySpeed(proxyID string, forceRefresh bool) ProxyTestResult {

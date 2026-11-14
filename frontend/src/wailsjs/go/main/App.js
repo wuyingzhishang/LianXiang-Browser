@@ -234,6 +234,10 @@ export function BookmarkSyncToProfiles() {
   return window['go']['main']['App']['BookmarkSyncToProfiles']();
 }
 
+export function BrowserChromeUserDataImport(arg1) {
+  return window['go']['main']['App']['BrowserChromeUserDataImport'](arg1);
+}
+
 export function BrowserClearCookies(arg1) {
   return window['go']['main']['App']['BrowserClearCookies'](arg1);
 }
@@ -660,6 +664,10 @@ export function DataDirectorySelectDirectory() {
 
 export function DataDirectorySetCustom(arg1, arg2) {
   return window['go']['main']['App']['DataDirectorySetCustom'](arg1, arg2);
+}
+
+export function DeleteBrowserProxyVirtualGroup(arg1) {
+  return window['go']['main']['App']['DeleteBrowserProxyVirtualGroup'](arg1);
 }
 
 export function DeleteGroup(arg1) {

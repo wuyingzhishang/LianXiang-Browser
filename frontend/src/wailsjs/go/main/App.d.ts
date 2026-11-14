@@ -126,6 +126,8 @@ export function BookmarkSave(arg1:Array<config.BrowserBookmark>):Promise<void>;
 
 export function BookmarkSyncToProfiles():Promise<backend.BookmarkSyncResult>;
 
+export function BrowserChromeUserDataImport(arg1:string):Promise<backend.ChromeUserDataImportResult>;
+
 export function BrowserClearCookies(arg1:string):Promise<void>;
 
 export function BrowserCoreDelete(arg1:string):Promise<void>;
@@ -339,6 +341,8 @@ export function DataDirectoryMigrate(arg1:backend.DataDirectoryMigrateOptions):P
 export function DataDirectorySelectDirectory():Promise<backend.DataDirectorySelectResult>;
 
 export function DataDirectorySetCustom(arg1:string,arg2:boolean):Promise<backend.DataDirectoryInfo>;
+
+export function DeleteBrowserProxyVirtualGroup(arg1:string):Promise<void>;
 
 export function DeleteGroup(arg1:string):Promise<void>;
 

@@ -16,12 +16,14 @@ import { useBrowserListData } from './browserList/useBrowserListData'
 import { useBrowserProfileActions } from './browserList/useBrowserProfileActions'
 import { warmupProfileProxyBeforeStart } from '../utils/proxyWarmup'
 import { ProfilePackagePasswordModal } from '../../backup/components/ProfilePackagePasswordModal'
+import { BrowserImportModal } from '../components/BrowserImportModal'
 import {
   copyBrowserProfile,
   deleteBrowserProfile,
   exportBrowserProfilePackage,
   fetchBrowserProfileTrash,
   importBrowserProfilePackageWithOptions,
+  importChromeUserData,
   prepareBrowserProfilePackageImport,
   permanentlyDeleteBrowserProfile,
   restoreBrowserProfile,
@@ -46,6 +48,7 @@ export function BrowserListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [batchLoading, setBatchLoading] = useState(false)
   const [profilePackageBusy, setProfilePackageBusy] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
   const [profileImportPreview, setProfileImportPreview] = useState<BrowserProfilePackageImportPreview | null>(null)
   const [pendingProfileExportIds, setPendingProfileExportIds] = useState<string[]>([])
   const [pendingProfileImport, setPendingProfileImport] = useState<{ zipPath: string; actions: BrowserProfilePackageImportAction[] } | null>(null)
@@ -432,6 +435,23 @@ export function BrowserListPage() {
     }
   }
 
+  const handleImportChromeUserData = async (profileName: string) => {
+    if (profilePackageBusy) return
+    setProfilePackageBusy(true)
+    try {
+      const result = await importChromeUserData(profileName)
+      if (result.cancelled) return
+      toast.success(`已导入 Chrome 数据：${result.profileName}（${result.copiedFiles} 个文件）`)
+      setSelectedIds(new Set())
+      setImportModalOpen(false)
+      await loadProfiles()
+    } catch (error: any) {
+      toast.error(error?.message || '导入 Chrome 用户数据失败')
+    } finally {
+      setProfilePackageBusy(false)
+    }
+  }
+
   const closePortableSessionPasswordModal = () => {
     if (profilePackageBusy) return
     setPortableSessionPasswordMode(null)
@@ -613,7 +633,7 @@ export function BrowserListPage() {
         onRefresh={() => { void loadProfiles() }}
         onOpenSettings={handleOpenSettings}
         onOpenTrash={openTrashModal}
-        onImportProfiles={handleImportProfiles}
+        onImportProfiles={() => setImportModalOpen(true)}
         importingProfiles={profilePackageBusy}
         onViewModeChange={setViewMode}
       />
@@ -792,6 +812,13 @@ export function BrowserListPage() {
         onClose={closePortableSessionPasswordModal}
         onConfirm={confirmPortableSessionPassword}
         onSkip={portableSessionPasswordMode === 'export' ? skipPortableSessionPassword : undefined}
+      />
+      <BrowserImportModal
+        open={importModalOpen}
+        busy={profilePackageBusy}
+        onClose={() => setImportModalOpen(false)}
+        onImportChrome={(profileName) => { void handleImportChromeUserData(profileName) }}
+        onImportPackage={() => { void handleImportProfiles(); setImportModalOpen(false) }}
       />
     </div>
   )

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/metacubex/mihomo/adapter"
+
 	"lianxiang-browser/backend/internal/config"
 )
 

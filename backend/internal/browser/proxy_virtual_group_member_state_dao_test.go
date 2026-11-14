@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/database"
 )
 
 func newMemberStateTestDAO(t *testing.T) *SQLiteProxyVirtualGroupMemberStateDAO {

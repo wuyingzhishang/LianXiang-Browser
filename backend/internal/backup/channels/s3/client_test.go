@@ -312,10 +312,10 @@ func (store *memoryS3) handler() http.Handler {
 func (store *memoryS3) writeList(response http.ResponseWriter, token string) {
 	response.Header().Set("Content-Type", "application/xml")
 	if token == "page-2" {
-		_, _ = fmt.Fprint(response, `<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>ant-chrome/backups/ant-chrome-backup-20260830.zip</Key><LastModified>2026-08-30T10:00:00Z</LastModified><Size>5</Size></Contents><Contents><Key>ant-chrome/backups/ignore.json</Key><LastModified>2026-08-30T10:00:00Z</LastModified><Size>8</Size></Contents></ListBucketResult>`)
+		_, _ = fmt.Fprint(response, `<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>lianxiang-browser/backups/ant-chrome-backup-20260830.zip</Key><LastModified>2026-08-30T10:00:00Z</LastModified><Size>5</Size></Contents><Contents><Key>lianxiang-browser/backups/ignore.json</Key><LastModified>2026-08-30T10:00:00Z</LastModified><Size>8</Size></Contents></ListBucketResult>`)
 		return
 	}
-	_, _ = fmt.Fprint(response, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>page-2</NextContinuationToken><Contents><Key>ant-chrome/backups/ant-chrome-backup-20260831.zip</Key><LastModified>2026-08-31T10:00:00Z</LastModified><Size>17</Size></Contents></ListBucketResult>`)
+	_, _ = fmt.Fprint(response, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>page-2</NextContinuationToken><Contents><Key>lianxiang-browser/backups/ant-chrome-backup-20260831.zip</Key><LastModified>2026-08-31T10:00:00Z</LastModified><Size>17</Size></Contents></ListBucketResult>`)
 }
 
 func (store *memoryS3) writeObject(response http.ResponseWriter, key string) {

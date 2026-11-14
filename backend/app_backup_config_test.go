@@ -1,7 +1,11 @@
 package backend
 
 import (
+	"errors"
+	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/database"
+	"path/filepath"
 	"testing"
 )
 

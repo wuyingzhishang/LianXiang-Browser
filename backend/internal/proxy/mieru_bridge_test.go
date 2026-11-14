@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 // mieru 节点解析：clash YAML → 节点 map（含缩进损坏形态修复）。

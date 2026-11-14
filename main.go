@@ -180,6 +180,13 @@ func repairProtectedInstallDataDir(appRoot, customDataDir string) {
 }
 
 func main() {
+	// Wails generation reflects the API without starting the desktop runtime.
+	if generatingBindings {
+		if err := wails.Run(&options.App{Bind: []interface{}{NewApp("", resolveBuildVersion())}}); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			lifecycle.LogPanic(appRoot, "process.panic", recovered)

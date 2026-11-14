@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/fsutil"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/fsutil"
+	"lianxiang-browser/backend/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 

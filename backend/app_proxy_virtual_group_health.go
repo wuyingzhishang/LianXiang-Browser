@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // virtualGroupSnapshotCache 缓存"分组 → 成员代理"与"代理 → 所属分组"两个索引。

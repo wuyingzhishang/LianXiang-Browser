@@ -1,10 +1,11 @@
 package backend
 
 import (
-	"lianxiang-browser/backend/internal/config"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -223,17 +224,7 @@ FROM src.browser_groups s
 			name: "browser_proxy_virtual_groups",
 		},
 		{
-			name: "browser_bookmarks",
-			insertSafe: `INSERT INTO browser_bookmarks (name, url, sort_order, open_on_start, folder, disabled, disabled_profile_ids)
-SELECT s.name, s.url, s.sort_order,
-       COALESCE(s.open_on_start, 0),
-       COALESCE(s.folder, ''),
-       COALESCE(s.disabled, 0),
-       COALESCE(s.disabled_profile_ids, '[]')
-FROM src.browser_bookmarks s
-WHERE NOT EXISTS (
-  SELECT 1 FROM browser_bookmarks t WHERE lower(t.url) = lower(s.url)
-)`,
+			name: "browser_profiles",
 		},
 		{
 			name: "browser_extensions",
@@ -445,10 +436,13 @@ WHERE NOT EXISTS (
 }
 
 type backupBookmarkRecord struct {
-	name        string
-	url         string
-	openOnStart int
-	sortOrder   int
+	name               string
+	url                string
+	openOnStart        int
+	sortOrder          int
+	folder             string
+	disabled           int
+	disabledProfileIDs string
 }
 
 func backupMergeBookmarkState(tx *sql.Tx, stats *backupMergeStats, current, incoming *config.Config) error {
@@ -522,8 +516,8 @@ func backupMergeBookmarkState(tx *sql.Tx, stats *backupMergeStats, current, inco
 			continue
 		}
 		if _, err := tx.Exec(
-			`INSERT INTO browser_bookmarks (name, url, open_on_start, sort_order) VALUES (?, ?, ?, ?)`,
-			bookmark.name, bookmark.url, bookmark.openOnStart, bookmark.sortOrder,
+			`INSERT INTO browser_bookmarks (name, url, open_on_start, sort_order, folder, disabled, disabled_profile_ids) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			bookmark.name, bookmark.url, bookmark.openOnStart, bookmark.sortOrder, bookmark.folder, bookmark.disabled, bookmark.disabledProfileIDs,
 		); err != nil {
 			return fmt.Errorf("导入书签失败: %w", err)
 		}
@@ -580,10 +574,21 @@ func backupReadSourceBookmarks(tx *sql.Tx) ([]backupBookmarkRecord, bool, error)
 	if err != nil {
 		return nil, false, err
 	}
-	query := `SELECT name, url, 0, sort_order FROM src.browser_bookmarks ORDER BY sort_order, rowid`
+	openOnStart := "0"
 	if hasOpenOnStart {
-		query = `SELECT name, url, COALESCE(open_on_start, 0), sort_order FROM src.browser_bookmarks ORDER BY sort_order, rowid`
+		openOnStart = "COALESCE(open_on_start, 0)"
 	}
+	expressions := []string{"''", "0", "'[]'"}
+	for i, column := range []string{"folder", "disabled", "disabled_profile_ids"} {
+		hasColumn, err := backupSrcColumnExists(tx, "browser_bookmarks", column)
+		if err != nil {
+			return nil, false, err
+		}
+		if hasColumn {
+			expressions[i] = "COALESCE(" + column + ", " + expressions[i] + ")"
+		}
+	}
+	query := fmt.Sprintf(`SELECT name, url, %s, sort_order, %s, %s, %s FROM src.browser_bookmarks ORDER BY sort_order, rowid`, openOnStart, expressions[0], expressions[1], expressions[2])
 	rows, err := tx.Query(query)
 	if err != nil {
 		return nil, false, fmt.Errorf("读取备份书签失败: %w", err)
@@ -593,7 +598,7 @@ func backupReadSourceBookmarks(tx *sql.Tx) ([]backupBookmarkRecord, bool, error)
 	bookmarks := make([]backupBookmarkRecord, 0)
 	for rows.Next() {
 		var bookmark backupBookmarkRecord
-		if err := rows.Scan(&bookmark.name, &bookmark.url, &bookmark.openOnStart, &bookmark.sortOrder); err != nil {
+		if err := rows.Scan(&bookmark.name, &bookmark.url, &bookmark.openOnStart, &bookmark.sortOrder, &bookmark.folder, &bookmark.disabled, &bookmark.disabledProfileIDs); err != nil {
 			return nil, false, err
 		}
 		bookmarks = append(bookmarks, bookmark)

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // 内置插件随二进制发布：编译时嵌入，首次启动解包并登记为默认安装。

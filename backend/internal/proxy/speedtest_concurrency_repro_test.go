@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 const reproVlessUUID = "3b9410a0-7f6e-4c1e-8a2d-000000000000"

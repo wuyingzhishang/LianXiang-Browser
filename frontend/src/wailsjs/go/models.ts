@@ -728,6 +728,30 @@ export namespace backend {
 	}
 	
 	
+	export class ChromeUserDataImportResult {
+	    cancelled: boolean;
+	    profileId: string;
+	    profileName: string;
+	    sourceDir: string;
+	    copiedFiles: number;
+	    skippedFiles: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ChromeUserDataImportResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cancelled = source["cancelled"];
+	        this.profileId = source["profileId"];
+	        this.profileName = source["profileName"];
+	        this.sourceDir = source["sourceDir"];
+	        this.copiedFiles = source["copiedFiles"];
+	        this.skippedFiles = source["skippedFiles"];
+	        this.message = source["message"];
+	    }
+	}
 	export class CookieInfo {
 	    name: string;
 	    value: string;

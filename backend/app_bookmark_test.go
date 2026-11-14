@@ -1,9 +1,9 @@
 package backend
 
 import (
-	"ant-chrome/backend/internal/browser"
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/database"
+	"lianxiang-browser/backend/internal/browser"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/database"
 	"path/filepath"
 	"testing"
 )
@@ -39,7 +39,9 @@ func TestMigrateToSQLiteFiltersDeletedDefaultBookmarks(t *testing.T) {
 	app.browserMgr.BookmarkDAO = bookmarkDAO
 	app.browserMgr.ProxyVirtualGroupDAO = browser.NewSQLiteProxyVirtualGroupDAO(db.GetConn())
 
-	app.migrateToSQLite()
+	if err := app.migrateToSQLite(); err != nil {
+		t.Fatal(err)
+	}
 	bookmarks, err := bookmarkDAO.List()
 	if err != nil {
 		t.Fatal(err)

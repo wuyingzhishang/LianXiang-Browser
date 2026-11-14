@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 func TestStopAutomationTargetProfileCleansStaleLocks(t *testing.T) {

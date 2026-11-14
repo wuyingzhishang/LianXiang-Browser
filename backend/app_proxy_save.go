@@ -1,9 +1,12 @@
 package backend
 
 import (
+	"fmt"
+	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/config"
 	"lianxiang-browser/backend/internal/logger"
 	"lianxiang-browser/backend/internal/proxy"
+	"strings"
 )
 
 func (a *App) SaveBrowserProxies(proxies []BrowserProxy) error {

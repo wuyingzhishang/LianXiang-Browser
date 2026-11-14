@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 // 安全控制：实例并发启动闸门——超限排队、释放放行、重复请求不占名额、不限制模式。

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 type proxySpeedProvenanceUpdater interface {

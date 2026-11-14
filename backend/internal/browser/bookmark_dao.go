@@ -89,6 +89,11 @@ func (d *SQLiteBookmarkDAO) ReplaceAll(bookmarks []config.BrowserBookmark) error
 			return fmt.Errorf("记录已删除书签失败: %w", err)
 		}
 	}
+	for url := range keptURLs {
+		if _, err := tx.Exec(`DELETE FROM browser_bookmark_deletions WHERE url = ?`, url); err != nil {
+			return fmt.Errorf("清除重新添加书签的删除标记失败: %w", err)
+		}
+	}
 
 	if _, err := tx.Exec(`DELETE FROM browser_bookmarks`); err != nil {
 		return fmt.Errorf("清空书签失败: %w", err)

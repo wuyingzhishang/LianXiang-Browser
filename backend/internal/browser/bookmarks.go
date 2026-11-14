@@ -1,9 +1,9 @@
 package browser
 
 import (
-	"lianxiang-browser/backend/internal/config"
 	"encoding/json"
 	"fmt"
+	"lianxiang-browser/backend/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +19,13 @@ func toChromiumTime(t time.Time) string {
 
 // EnsureDefaultBookmarks 将默认书签合并到书签栏（已存在的 URL 不重复添加）
 func EnsureDefaultBookmarks(userDataDir string, bookmarks []config.BrowserBookmark) error {
-	if len(bookmarks) == 0 {
+	return SyncDefaultBookmarks(userDataDir, bookmarks, bookmarks)
+}
+
+// SyncDefaultBookmarks adds enabled managed bookmarks and removes only managed
+// nodes that are disabled. User-created nodes are left untouched.
+func SyncDefaultBookmarks(userDataDir string, managedBookmarks, enabledBookmarks []config.BrowserBookmark) error {
+	if len(managedBookmarks) == 0 && len(enabledBookmarks) == 0 {
 		return nil
 	}
 
@@ -37,11 +43,30 @@ func EnsureDefaultBookmarks(userDataDir string, bookmarks []config.BrowserBookma
 	}
 
 	now := toChromiumTime(time.Now())
+	if root == nil && len(enabledBookmarks) == 0 {
+		return nil
+	}
 
 	// 初始化空结构
 	if root == nil {
 		root = newEmptyBookmarkRoot(now)
 	}
+
+	managedURLs := make(map[string]string, len(managedBookmarks))
+	enabledURLs := make(map[string]bool, len(enabledBookmarks))
+	for _, bookmark := range managedBookmarks {
+		url := strings.TrimSpace(bookmark.URL)
+		if url != "" {
+			managedURLs[NormalizeBookmarkURL(url)] = bookmarkGUID(url)
+		}
+	}
+	for _, bookmark := range enabledBookmarks {
+		url := strings.TrimSpace(bookmark.URL)
+		if url != "" {
+			enabledURLs[NormalizeBookmarkURL(url)] = true
+		}
+	}
+	removed := removeDisabledManagedBookmarks(root, managedURLs, enabledURLs)
 
 	// 取出 bookmark_bar children，按整个书签树收集已有 URL 集合
 	barChildren := extractBarChildren(root)
@@ -52,29 +77,33 @@ func EnsureDefaultBookmarks(userDataDir string, bookmarks []config.BrowserBookma
 
 	// 把不存在的默认书签追加进去
 	added := false
-	for _, b := range bookmarks {
-		if b.Name == "" || b.URL == "" {
+	for _, b := range enabledBookmarks {
+		name := strings.TrimSpace(b.Name)
+		url := strings.TrimSpace(b.URL)
+		if name == "" || url == "" {
 			continue
 		}
-		if existingURLs[b.URL] {
+		urlKey := NormalizeBookmarkURL(url)
+		if existingURLs[urlKey] {
 			continue
 		}
-		maxID++
-		barChildren = append(barChildren, map[string]interface{}{
+		bookmarkNode := map[string]interface{}{
 			"date_added":     now,
 			"date_last_used": "0",
-			"guid":           bookmarkGUID(b.URL),
-			"id":             fmt.Sprintf("%d", maxID),
+			"guid":           bookmarkGUID(url),
 			"meta_info":      map[string]string{"power_bookmark_meta": ""},
-			"name":           b.Name,
+			"name":           name,
 			"type":           "url",
-			"url":            b.URL,
-		})
-		existingURLs[b.URL] = true
+			"url":            url,
+		}
+		maxID++
+		bookmarkNode["id"] = fmt.Sprintf("%d", maxID)
+		barChildren, maxID = appendBookmarkNode(barChildren, bookmarkFolderParts(b.Folder), bookmarkNode, now, maxID, "")
+		existingURLs[urlKey] = true
 		added = true
 	}
 
-	if !added {
+	if !added && !removed {
 		return nil
 	}
 
@@ -91,6 +120,64 @@ func EnsureDefaultBookmarks(userDataDir string, bookmarks []config.BrowserBookma
 		return fmt.Errorf("序列化书签失败: %w", err)
 	}
 	return os.WriteFile(bookmarksPath, out, 0644)
+}
+
+func removeDisabledManagedBookmarks(root map[string]interface{}, managedURLs map[string]string, enabledURLs map[string]bool) bool {
+	roots, ok := root["roots"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	changed := false
+	for key, rawRoot := range roots {
+		folder, ok := rawRoot.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		children, ok := folder["children"].([]interface{})
+		if !ok {
+			continue
+		}
+		updated, removed := removeDisabledManagedNodes(children, managedURLs, enabledURLs)
+		if removed {
+			folder["children"] = updated
+			roots[key] = folder
+			changed = true
+		}
+	}
+	root["roots"] = roots
+	return changed
+}
+
+func removeDisabledManagedNodes(nodes []interface{}, managedURLs map[string]string, enabledURLs map[string]bool) ([]interface{}, bool) {
+	updated := make([]interface{}, 0, len(nodes))
+	changed := false
+	for _, rawNode := range nodes {
+		node, ok := rawNode.(map[string]interface{})
+		if !ok {
+			updated = append(updated, rawNode)
+			continue
+		}
+		if node["type"] == "url" {
+			url, _ := node["url"].(string)
+			urlKey := NormalizeBookmarkURL(url)
+			expectedGUID, managed := managedURLs[urlKey]
+			guid, _ := node["guid"].(string)
+			if managed && !enabledURLs[urlKey] && strings.EqualFold(guid, expectedGUID) {
+				changed = true
+				continue
+			}
+		}
+		if node["type"] == "folder" {
+			children, _ := node["children"].([]interface{})
+			nextChildren, removed := removeDisabledManagedNodes(children, managedURLs, enabledURLs)
+			if removed {
+				node["children"] = nextChildren
+				changed = true
+			}
+		}
+		updated = append(updated, node)
+	}
+	return updated, changed
 }
 
 // ReplaceBookmarkURL 将已有书签中的 oldURL 更新为 newURL，用于修复运行时动态书签地址。
@@ -273,7 +360,7 @@ func collectURLs(nodes []interface{}, out map[string]bool) {
 		}
 		if node["type"] == "url" {
 			if u, ok := node["url"].(string); ok {
-				out[u] = true
+				out[NormalizeBookmarkURL(u)] = true
 			}
 		} else if node["type"] == "folder" {
 			if sub, ok := node["children"].([]interface{}); ok {
@@ -283,7 +370,61 @@ func collectURLs(nodes []interface{}, out map[string]bool) {
 	}
 }
 
-// findMaxID 遍历整个书签树找到最大数字 id
+func bookmarkFolderParts(folder string) []string {
+	parts := strings.FieldsFunc(folder, func(r rune) bool {
+		return r == '/' || r == '\\'
+	})
+	clean := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			clean = append(clean, part)
+		}
+	}
+	return clean
+}
+
+func appendBookmarkNode(children []interface{}, folders []string, bookmarkNode map[string]interface{}, now string, maxID int, parentPath string) ([]interface{}, int) {
+	if len(folders) == 0 {
+		return append(children, bookmarkNode), maxID
+	}
+	folderName := folders[0]
+	folderPath := folderName
+	if parentPath != "" {
+		folderPath = parentPath + "/" + folderName
+	}
+	for index, rawChild := range children {
+		folder, ok := rawChild.(map[string]interface{})
+		if !ok || folder["type"] != "folder" {
+			continue
+		}
+		name, _ := folder["name"].(string)
+		if !strings.EqualFold(strings.TrimSpace(name), folderName) {
+			continue
+		}
+		subChildren, _ := folder["children"].([]interface{})
+		updated, nextMaxID := appendBookmarkNode(subChildren, folders[1:], bookmarkNode, now, maxID, folderPath)
+		folder["children"] = updated
+		folder["date_modified"] = now
+		children[index] = folder
+		return children, nextMaxID
+	}
+	maxID++
+	newFolder := map[string]interface{}{
+		"children":       []interface{}{},
+		"date_added":     now,
+		"date_last_used": "0",
+		"date_modified":  now,
+		"guid":           bookmarkGUID("folder:" + folderPath),
+		"id":             fmt.Sprintf("%d", maxID),
+		"name":           folderName,
+		"type":           "folder",
+	}
+	updated, nextMaxID := appendBookmarkNode([]interface{}{}, folders[1:], bookmarkNode, now, maxID, folderPath)
+	newFolder["children"] = updated
+	return append(children, newFolder), nextMaxID
+}
+
+// findMaxID 遍历整个书签树找到最大数字 id。
 func findMaxID(root map[string]interface{}) int {
 	max := 0
 	roots, ok := root["roots"].(map[string]interface{})

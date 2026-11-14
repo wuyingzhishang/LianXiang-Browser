@@ -10,6 +10,7 @@ import type {
   BrowserProfilePackageImportPreview,
   BrowserProfilePackageImportAction,
   BrowserProfilePackageImportResult,
+  ChromeUserDataImportResult,
 } from '../types'
 import { getBindings, getMockProfiles, nowISOString, setMockProfiles } from './runtime'
 
@@ -175,6 +176,22 @@ export async function importBrowserProfilePackage(): Promise<BrowserProfilePacka
     importedCount: 0,
     profileMappings: {},
     message: '当前环境不支持导入实例',
+  }
+}
+
+export async function importChromeUserData(profileName = ''): Promise<ChromeUserDataImportResult> {
+  const bindings: any = await getBindings()
+  if (bindings?.BrowserChromeUserDataImport) {
+    return await bindings.BrowserChromeUserDataImport(profileName)
+  }
+  return {
+    cancelled: true,
+    profileId: '',
+    profileName: '',
+    sourceDir: '',
+    copiedFiles: 0,
+    skippedFiles: 0,
+    message: '当前环境不支持导入 Chrome 用户数据',
   }
 }
 

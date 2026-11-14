@@ -71,6 +71,7 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.db = db
+	a.reportDatabaseRecovery(log, recovery)
 	if apppath.IsDetached(a.appRoot) {
 		if profiles, queryErr := countDatabaseRows(db.GetConn(), "browser_profiles"); queryErr == nil {
 			log.Info("运行时数据库已打开", logger.F("path", a.resolveAppPath(cfg.Database.SQLite.Path)), logger.F("profiles", profiles))
@@ -81,9 +82,19 @@ func (a *App) startup(ctx context.Context) {
 	if err := db.Migrate(); err != nil {
 		log.Error("数据库迁移失败", logger.F("error", err))
 	}
+	if report, reconcileErr := db.Reconcile(a.resolveAppPath("data/db-backups")); reconcileErr != nil {
+		log.Warn("数据库结构自愈对齐失败", logger.F("error", reconcileErr.Error()))
+	} else if len(report.AddedColumns) > 0 || len(report.AddedTables) > 0 {
+		log.Info("数据库结构已对齐", logger.F("report", report))
+	}
 	phases.mark("database")
 
-	a.startupInitManagers(cfg, db)
+	if err := a.startupInitManagers(cfg, db); err != nil {
+		log.Error("浏览器数据初始化失败", logger.F("error", err))
+		_ = db.Close()
+		runtime.LogFatal(ctx, fmt.Sprintf("浏览器数据初始化失败: %v", err))
+		return
+	}
 	phases.mark("managers")
 	a.startupInitLaunchCode(log)
 	a.startupInitLaunchServer(log)
@@ -376,10 +387,10 @@ func (a *App) reportDatabaseRecovery(log *logger.Logger, recovery database.Recov
 		logger.F("backup", recovery.BrokenBackupPath),
 		logger.F("parked", recovery.BrokenParkedPath))
 	a.emitRuntimeEvent("app:db-recovered", map[string]any{
-		"reason":       recovery.Reason,
-		"backup_path":  recovery.BrokenBackupPath,
-		"parked_path":  recovery.BrokenParkedPath,
-		"recovered":    true,
+		"reason":      recovery.Reason,
+		"backup_path": recovery.BrokenBackupPath,
+		"parked_path": recovery.BrokenParkedPath,
+		"recovered":   true,
 	})
 }
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // ProfileExtensionLoadPaths 返回该实例需要随启动加载的插件目录（绝对路径）。

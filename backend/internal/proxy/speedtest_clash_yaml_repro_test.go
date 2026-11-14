@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 // 复现用户报错：xray 桥接启动失败: yaml: line 1: did not find expected '-' indicator

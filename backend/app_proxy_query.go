@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"context"
+	"fmt"
 	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/config"
 	"lianxiang-browser/backend/internal/proxy"
@@ -15,9 +17,9 @@ func (a *App) BrowserProxyList() []BrowserProxy {
 	}
 	proxies, err := browser.LoadLatestProxiesWithFallback(a.browserMgr.ProxyDAO, a.config.Browser.Proxies)
 	if err != nil {
-		return nil, err
+		return []BrowserProxy{}
 	}
-	return proxies, nil
+	return proxies
 }
 
 // BrowserProxyListGroups 获取所有代理分组名称

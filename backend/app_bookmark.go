@@ -56,7 +56,14 @@ func (a *App) BookmarkSave(items []BrowserBookmark) error {
 		name := strings.TrimSpace(item.Name)
 		url := strings.TrimSpace(item.URL)
 		if name != "" && url != "" {
-			valid = append(valid, BrowserBookmark{Name: name, URL: url, OpenOnStart: item.OpenOnStart, Folder: item.Folder, Disabled: item.Disabled, DisabledProfileIDs: item.DisabledProfileIDs})
+			valid = append(valid, BrowserBookmark{
+				Name:               name,
+				URL:                url,
+				OpenOnStart:        item.OpenOnStart,
+				Folder:             normalizeBookmarkFolder(item.Folder),
+				Disabled:           item.Disabled,
+				DisabledProfileIDs: normalizeBookmarkProfileIDs(item.DisabledProfileIDs),
+			})
 		}
 	}
 	valid = normalizeBookmarkList(valid)
@@ -125,7 +132,14 @@ func mergeBookmarksByURL(items []BrowserBookmark, required []BrowserBookmark) []
 			return
 		}
 		seen[key] = struct{}{}
-		merged = append(merged, BrowserBookmark{Name: name, URL: url, OpenOnStart: item.OpenOnStart, Folder: item.Folder, Disabled: item.Disabled, DisabledProfileIDs: item.DisabledProfileIDs})
+		merged = append(merged, BrowserBookmark{
+			Name:               name,
+			URL:                url,
+			OpenOnStart:        item.OpenOnStart,
+			Folder:             normalizeBookmarkFolder(item.Folder),
+			Disabled:           item.Disabled,
+			DisabledProfileIDs: normalizeBookmarkProfileIDs(item.DisabledProfileIDs),
+		})
 	}
 	for _, item := range items {
 		appendOne(item)
@@ -168,7 +182,60 @@ func normalizeBookmarkList(items []BrowserBookmark) []BrowserBookmark {
 	return out
 }
 
-// BookmarkSyncToProfiles 将当前默认书签增量同步到已有未运行实例。
+func normalizeBookmarkFolder(folder string) string {
+	parts := strings.FieldsFunc(folder, func(r rune) bool {
+		return r == '/' || r == '\\'
+	})
+	clean := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			clean = append(clean, part)
+		}
+	}
+	return strings.Join(clean, "/")
+}
+
+func normalizeBookmarkProfileIDs(profileIDs []string) []string {
+	seen := make(map[string]struct{}, len(profileIDs))
+	clean := make([]string, 0, len(profileIDs))
+	for _, profileID := range profileIDs {
+		profileID = strings.TrimSpace(profileID)
+		if profileID == "" {
+			continue
+		}
+		key := strings.ToLower(profileID)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		clean = append(clean, profileID)
+	}
+	return clean
+}
+
+func bookmarkEnabledForProfile(bookmark BrowserBookmark, profileID string) bool {
+	if bookmark.Disabled {
+		return false
+	}
+	for _, disabledProfileID := range bookmark.DisabledProfileIDs {
+		if strings.EqualFold(strings.TrimSpace(disabledProfileID), strings.TrimSpace(profileID)) {
+			return false
+		}
+	}
+	return true
+}
+
+func bookmarksForProfile(bookmarks []BrowserBookmark, profileID string) []BrowserBookmark {
+	enabled := make([]BrowserBookmark, 0, len(bookmarks))
+	for _, bookmark := range bookmarks {
+		if bookmarkEnabledForProfile(bookmark, profileID) {
+			enabled = append(enabled, bookmark)
+		}
+	}
+	return enabled
+}
+
+// BookmarkSyncToProfiles 同步启用的书签，移除本应用写入且已禁用的书签。
 func (a *App) BookmarkSyncToProfiles() BookmarkSyncResult {
 	result := BookmarkSyncResult{}
 	log := logger.New("Bookmark")
@@ -229,7 +296,7 @@ func (a *App) BookmarkSyncToProfiles() BookmarkSyncResult {
 				continue
 			}
 		}
-		if err := browser.EnsureDefaultBookmarks(userDataDir, runtimeBookmarks); err != nil {
+		if err := browser.SyncDefaultBookmarks(userDataDir, runtimeBookmarks, bookmarksForProfile(runtimeBookmarks, profile.ProfileId)); err != nil {
 			result.Failed++
 			name := profile.ProfileName
 			if name == "" {

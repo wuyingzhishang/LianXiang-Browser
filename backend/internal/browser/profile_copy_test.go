@@ -3,7 +3,7 @@ package browser
 import (
 	"testing"
 
-	"ant-chrome/backend/internal/config"
+	"lianxiang-browser/backend/internal/config"
 )
 
 func TestNormalizeCopyAutomationTargetsMapsLegacyTargetsToSeed(t *testing.T) {

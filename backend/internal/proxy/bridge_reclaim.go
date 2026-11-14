@@ -3,7 +3,7 @@ package proxy
 import (
 	"strings"
 
-	"ant-chrome/backend/internal/logger"
+	"lianxiang-browser/backend/internal/logger"
 )
 
 // 测速、IP 健康等短时探测通过引用计数占用桥接，探测结束后调用 ReclaimBridgeIfIdle：

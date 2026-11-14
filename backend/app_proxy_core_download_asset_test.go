@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"ant-chrome/backend/internal/config"
-	"ant-chrome/backend/internal/proxy"
+	"lianxiang-browser/backend/internal/config"
+	"lianxiang-browser/backend/internal/proxy"
 )
 
 // mieru 官方 Release 的真实资产命名（v3.39.0 实测），含干扰项：

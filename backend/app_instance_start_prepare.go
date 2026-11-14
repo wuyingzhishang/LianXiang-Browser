@@ -1,9 +1,10 @@
 package backend
 
 import (
+	"errors"
+	"fmt"
 	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/logger"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,7 +149,7 @@ func (a *App) prepareBrowserStartPlan(input browserStartInput, profile *BrowserP
 	totalReadyTimeout := time.Duration(maxStartAttempts) * startReadyTimeout
 	restoreLastSession := profileRestoreLastSession(profile, a.config)
 	fingerprintExpectedArgs := combineFingerprintExpectedArgs(fingerprintLaunchArgs, sanitizedProfileLaunchArgs, sanitizedExtraLaunchArgs)
-	defaultStartURLs := a.resolveFingerprintCheckStartURLsForExpectedArgsAndProfile(profile.ProfileId, fingerprintExpectedArgs, profile, mergeStartURLs(browserDefaultStartURLs(a.config), bookmarkStartURLs(bookmarks)))
+	defaultStartURLs := a.resolveFingerprintCheckStartURLsForExpectedArgsAndProfile(profile.ProfileId, fingerprintExpectedArgs, profile, mergeStartURLs(browserDefaultStartURLs(a.config), bookmarkStartURLs(bookmarksForProfile(bookmarks, profile.ProfileId))))
 	startURLs := a.resolveFingerprintCheckStartURLsForExpectedArgsAndProfile(profile.ProfileId, fingerprintExpectedArgs, profile, input.StartURLs)
 	launchTargets, deferredStartTargets, deferredStartNewTabs := buildBrowserLaunchTargets(
 		startURLs,
@@ -303,7 +304,7 @@ func (a *App) prepareBrowserLaunchContext(input browserStartInput, profile *Brow
 			log.Warn("旧指纹检测书签更新失败", logger.F("profile_id", input.ProfileID), logger.F("error", err.Error()))
 		}
 	}
-	if err := browser.EnsureDefaultBookmarks(userDataDir, runtimeBookmarks); err != nil {
+	if err := browser.SyncDefaultBookmarks(userDataDir, runtimeBookmarks, bookmarksForProfile(runtimeBookmarks, profile.ProfileId)); err != nil {
 		log.Error("默认书签写入失败", logger.F("error", err.Error()))
 	}
 	if err := writeBrowserLanguagePreferences(userDataDir, fingerprintLaunchArgs); err != nil {

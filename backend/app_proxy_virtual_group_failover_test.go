@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 func TestRuntimeFailoverCooldownBlocksImmediateRetry(t *testing.T) {

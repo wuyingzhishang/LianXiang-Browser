@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/config"
 	"lianxiang-browser/backend/internal/database"
 	"path/filepath"
@@ -386,6 +387,49 @@ func TestBackupMergeDatabaseDoesNotRestoreDeletedBookmarks(t *testing.T) {
 	}
 	if len(deletedURLs) != 1 || deletedURLs[0] != deletedURL {
 		t.Fatalf("deletion markers after import = %#v, want %q to remain authoritative", deletedURLs, deletedURL)
+	}
+}
+
+func TestBackupMergeDatabasePreservesBookmarkSettings(t *testing.T) {
+	root := t.TempDir()
+	target, err := database.NewDB(filepath.Join(root, "target.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = target.Close() })
+	if err := target.Migrate(); err != nil {
+		t.Fatal(err)
+	}
+	sourcePath := filepath.Join(root, "source.db")
+	source, err := database.NewDB(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := source.Migrate(); err != nil {
+		_ = source.Close()
+		t.Fatal(err)
+	}
+	want := []config.BrowserBookmark{{Name: "Grouped", URL: "https://example.com/Path?Query=One", Folder: "工作/AI", OpenOnStart: true, Disabled: true, DisabledProfileIDs: []string{"profile-a"}}}
+	if err := browser.NewSQLiteBookmarkDAO(source.GetConn()).ReplaceAll(want); err != nil {
+		_ = source.Close()
+		t.Fatal(err)
+	}
+	if err := source.Close(); err != nil {
+		t.Fatal(err)
+	}
+	app := NewApp(root)
+	app.db = target
+	for i := 0; i < 2; i++ {
+		if _, err := app.backupMergeDatabaseFromSource(sourcePath, nil, &backupMergeStats{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := browser.NewSQLiteBookmarkDAO(target.GetConn()).List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Folder != want[0].Folder || !got[0].Disabled || !got[0].OpenOnStart || len(got[0].DisabledProfileIDs) != 1 || got[0].DisabledProfileIDs[0] != "profile-a" {
+		t.Fatalf("bookmark settings lost on restore: %#v", got)
 	}
 }
 

@@ -3,7 +3,7 @@ package launchcode
 import (
 	"testing"
 
-	"ant-chrome/backend/internal/browser"
+	"lianxiang-browser/backend/internal/browser"
 )
 
 func TestProfileProxySelectionSurvivesLaunchCodeInputNormalization(t *testing.T) {
