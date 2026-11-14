@@ -1,33 +1,35 @@
-# 构建与发布检查清单 v1.9.3（同版本更新）
+# v1.9.4 构建与发布记录
 
-## 版本与文档
+日期：2026-11-15。目标：Windows x64。源码分支：`upstream-update`。
 
-- [x] `wails.json` productVersion 为 `1.9.3`
-- [x] `frontend/package.json` 和 `package-lock.json` 为 `1.9.3`
-- [x] `frontend/package.json.md5` 已重新计算
-- [x] `README.md`、`CHANGELOG.md` 和 Windows 发布文档已更新
-- [x] GitHub Release 简介已写入 `docs/github-release-template.md`，并填入本次构建摘要
-- [x] 版本号保持 `1.9.3`；本次更新不创建新版本号
-- [x] 主 README、CHANGELOG、Release Notes 与 Windows 发布文档已同步“关于我”页面移除说明
+## 已完成
 
-## 构建与发布
+- [x] Wails、前端 package/lock 元数据及应用内更新日志升级至 1.9.4。
+- [x] 主程序 Windows 版本字符串为 1.9.4，固定版本资源为 1.9.4.0；安装器版本资源同步。
+- [x] `frontend/package.json.md5` 与当前文件一致。
+- [x] 重写主 README，新增 `RELEASE-NOTES-v1.9.4.md`，更新 Release 简介和 Windows 发布说明。
+- [x] Go 全量测试 `go test ./...` 通过。
+- [x] 前端 TypeScript 检查与生产构建通过。
+- [x] 桌面接口 10 项测试通过，覆盖全部 213 个命令。
+- [x] 发布脚本临时夹具验证通过：保留旧配置/数据库、校验范围正确、清理路径受限、阻止数据库入包。
+- [x] 生成主程序、NSIS 安装包和便携 ZIP。
+- [x] 只读解包验证安装包与 ZIP，包内主程序 SHA-256 与独立 EXE 一致，代理运行时与源码运行时一致。
+- [x] 默认配置来自发布模板，包内没有用户数据库、日志、Cookie 或本地凭据。
+- [x] 最终便携包在独立目录启动，界面显示 v1.9.4；实例列表正常，退出弹窗和仅退出应用验证通过。
+- [x] 三个最终产物的 SHA-256 已生成并逐项复核。
 
-- [x] Go 应用构建通过
-- [x] 前端生产构建通过
-- [x] Windows 本地 EXE 已生成
-- [x] Windows NSIS 安装包已生成
-- [x] Windows 便携 ZIP 已生成
-- [x] 所有 Windows 产物的 SHA-256 汇总到单一 `SHA256SUMS.txt`
-- [x] `SHA256SUMS.txt` 已在本次构建后生成并与产物匹配
+## 最终发行文件
 
-## 产物
+`release/v1.9.4/` 保存三个 Windows 产物、`SHA256SUMS.txt` 和 README。
+本地构建主程序保留为 `build/bin/lianxiang-browser.exe`。
 
-发布目录为 `release/v1.9.3/`，只包含 Windows 安装包、本地 EXE、便携 ZIP、统一的 `SHA256SUMS.txt` 和 `README.md`，不包含数据库、日志、备份凭据或 staging 临时文件。相同版本目录更新时，删除旧的多余产物后再核对清单。
+当前用户数据、数据库格式、配置格式、实例路径和两套代理连接栈未调整。打包和验证均使用发布模板或隔离测试数据；没有执行安装器覆盖真实安装。
 
-## 验证
+## 验证范围
 
-```powershell
-Get-Content .\publish\output\SHA256SUMS.txt
-Get-FileHash .\publish\output\LianXiangBrowser-Setup-1.9.3.exe -Algorithm SHA256
-Get-FileHash .\publish\output\LianXiangBrowser-1.9.3-windows-amd64-portable.zip -Algorithm SHA256
-```
+安装器已通过 NSIS 编译、版本资源核对和只读解包校验，未执行真实覆盖安装/卸载测试。未实测大量运行实例同时退出。此记录不表示已推送代码或发布 GitHub Release。
+
+## 清理约定
+
+已清理旧版独立发行文件、v1.9.3 Release 文档和旧测试 EXE；历史变更保留在 CHANGELOG。剩余临时解包/测试目录和 `publish/output/v1.9.4` 中间输出副本的清理被自动审批策略阻止（仅返回 `blocked by policy`，未提供具体原因），暂时保留；目录清理尚未全部完成。
+不递归删除 `publish/output`、`build/bin` 或真实数据目录，不删除其中现有配置及数据库。Go/Wails/NSIS 工具链和原有未提交修改保留。

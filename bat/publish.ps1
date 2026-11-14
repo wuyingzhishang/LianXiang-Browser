@@ -2,7 +2,8 @@
     [string]$Target,
     [string]$Version,
     [ValidateSet("INSTALLER", "PORTABLE", "BOTH")]
-    [string]$WindowsFormat
+    [string]$WindowsFormat,
+    [string]$OutputDirectory
 )
 
 Set-StrictMode -Version Latest
@@ -24,6 +25,8 @@ $script:WindowsPortableDone = $false
 $script:WindowsBinaryDone = $false
 $script:LinuxDone = $false
 $script:ReleaseArtifacts = New-Object System.Collections.Generic.List[string]
+$script:OutputDir = Join-Path $repoRoot "publish/output"
+$script:WindowsStagingDir = ""
 
 function Write-Section {
     param([string]$Text)
@@ -351,14 +354,10 @@ function Build-WindowsBinary {
 }
 
 function Reset-PublishWorkspace {
-    foreach ($relativePath in @("publish/output", "publish/staging")) {
-        $path = Join-Path $repoRoot $relativePath
-        if (Test-Path -LiteralPath $path) {
-            Remove-Item -LiteralPath $path -Recurse -Force
-        }
-        New-Item -ItemType Directory -Path $path -Force | Out-Null
-    }
-    Write-Host "✓ 已清理旧发布产物和临时 staging"
+    # An EXE may have been run from output; never remove that directory or its data.
+    New-Item -ItemType Directory -Path $script:OutputDir -Force | Out-Null
+    $script:WindowsStagingDir = Join-Path $repoRoot ("publish/staging/windows-" + $script:ResolvedVersion + "-" + [guid]::NewGuid().ToString("N"))
+    Write-Host "✓ 输出目录: $script:OutputDir（保留既有文件和数据）"
     Write-Host ""
 }
 
@@ -374,10 +373,9 @@ function Add-ReleaseArtifact {
 }
 
 function Write-ReleaseChecksums {
-    $outputDir = Join-Path $repoRoot "publish/output"
-    $artifacts = @(Get-ChildItem -LiteralPath $outputDir -File -Force | Where-Object {
-        $_.Name -ne "SHA256SUMS.txt" -and $_.Extension -ne ".sha256"
-    } | Sort-Object Name)
+    $outputDir = $script:OutputDir
+    # Only checksum artifacts produced by this run, never local config or user data.
+    $artifacts = @($script:ReleaseArtifacts | ForEach-Object { Get-Item -LiteralPath $_ } | Sort-Object Name)
     if ($artifacts.Count -eq 0) {
         throw "没有可写入 SHA-256 的发布产物"
     }
@@ -389,19 +387,19 @@ function Write-ReleaseChecksums {
         Write-Host "✓ SHA-256: $name"
     }
     Set-Content -LiteralPath (Join-Path $outputDir "SHA256SUMS.txt") -Value ($sumLines -join [Environment]::NewLine) -Encoding ascii
-    Write-Host "✓ SHA-256 汇总: publish\output\SHA256SUMS.txt"
+    Write-Host "✓ SHA-256 汇总: $outputDir\SHA256SUMS.txt"
     Write-Host ""
 }
 
 function Publish-WindowsBinaryArtifact {
     param([Parameter(Mandatory = $true)][string]$BinaryPath)
-    $outputDir = Join-Path $repoRoot "publish/output"
+    $outputDir = $script:OutputDir
     $name = "LianXiangBrowser-$script:ResolvedVersion-windows-amd64.exe"
     $target = Join-Path $outputDir $name
     Copy-Item -LiteralPath $BinaryPath -Destination $target -Force
     Add-ReleaseArtifact -Path $target
     $script:WindowsBinaryDone = $true
-    Write-Host "✓ Windows 本地 EXE: publish\output\$name"
+    Write-Host "✓ Windows 本地 EXE: $target"
     Write-Host ""
 }
 
@@ -605,6 +603,8 @@ function Assert-WindowsStagingPrivacy {
     foreach ($file in $files) {
         $relativePath = $file.FullName.Substring($StagingDir.Length).TrimStart('\', '/')
         if ($file.Name -ieq 'backup.local.yaml' -or
+            $file.Name -match '(?i)\.(?:db|sqlite|sqlite3|log)(?:-wal|-shm)?$' -or
+            $file.Name -in @('profiles.yaml', 'proxies.yaml', 'datadir.config.yaml', 'Local State', 'Cookies', 'Login Data', 'History') -or
             $file.Name -match '(?i)\.local\.(?:yaml|yml|json)$' -or
             (Test-LocalBackupArtifact -File $file) -or
             $relativePath -match '(?i)(^|[\\/])(?:\.local-backup|backup|backups)(?:[\\/]|$)') {
@@ -618,14 +618,14 @@ function Assert-WindowsStagingPrivacy {
 function New-WindowsStaging {
     Write-Host "[Windows] 组装 staging 目录..."
 
-    $stagingDir = Join-Path $repoRoot "publish/staging"
+    $stagingDir = $script:WindowsStagingDir
     $releaseConfig = Join-Path $repoRoot "publish/config.init.yaml"
     $binaryPath = Join-Path $repoRoot "build/bin/lianxiang-browser.exe"
     $binDir = Join-Path $repoRoot "bin"
     $chromeRoot = Join-Path $repoRoot "chrome"
 
     if (Test-Path -LiteralPath $stagingDir) {
-        Remove-Item -LiteralPath $stagingDir -Recurse -Force
+        throw "拒绝覆盖已存在的 staging 目录: $stagingDir"
     }
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
@@ -690,7 +690,7 @@ function Invoke-WindowsPackaging {
     )
 
     Write-Host "[Windows] 调用 NSIS 打包..."
-    $outputDir = Join-Path $repoRoot "publish/output"
+    $outputDir = $script:OutputDir
     if (-not (Test-Path -LiteralPath $outputDir)) {
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
@@ -712,6 +712,8 @@ function Invoke-WindowsPackaging {
     $nsisArguments = @(
         "/DVERSION=$script:ResolvedVersion",
         "/DSTAGINGDIR=$stagingAbs",
+        "/DOUTPUTDIR=$outputDir",
+        "/DFILEVERSION=$(($script:ResolvedVersion -split '[-+]')[0]).0",
         "publish\installer.nsi"
     )
     if (-not $useNsisConfig) {
@@ -734,7 +736,7 @@ function New-WindowsPortableArchive {
     )
 
     Write-Host "[Windows] 生成便携 ZIP..."
-    $outputDir = Join-Path $repoRoot "publish/output"
+    $outputDir = $script:OutputDir
     if (-not (Test-Path -LiteralPath $outputDir)) {
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
@@ -800,7 +802,7 @@ function New-WindowsPortableArchive {
 
     Add-ReleaseArtifact -Path $archivePath
     $script:WindowsPortableDone = $true
-    Write-Host "✓ Windows 便携包生成成功: publish\output\$archiveName"
+    Write-Host "✓ Windows 便携包生成成功: $archivePath"
     Write-Host ""
     return $archivePath
 }
@@ -809,8 +811,16 @@ function Remove-WindowsStaging {
     param([string]$StagingDir)
 
     if ($StagingDir -and (Test-Path -LiteralPath $StagingDir)) {
+        $resolved = (Resolve-Path -LiteralPath $StagingDir).Path
+        $stagingRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot "publish/staging")).TrimEnd('\') + '\'
+        if ($resolved -ne $script:WindowsStagingDir -or -not $resolved.StartsWith($stagingRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "拒绝清理非本次构建的 staging 目录: $resolved"
+        }
+        if ((Get-Item -LiteralPath $resolved).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "拒绝清理重解析目录: $resolved"
+        }
         Write-Host "[Windows] 清理临时文件..."
-        Remove-Item -LiteralPath $StagingDir -Recurse -Force
+        Remove-Item -LiteralPath $resolved -Recurse -Force
         Write-Host "✓ staging 目录已清理"
         Write-Host ""
     }
@@ -895,6 +905,14 @@ try {
     $targetWasProvided = (Get-TrimmedText $Target) -ne ""
     $publishTarget = Resolve-PublishTarget -InputTarget $Target
     $resolvedWindowsFormat = Resolve-WindowsFormat -InputFormat $WindowsFormat -PublishTarget $publishTarget -Interactive (-not $targetWasProvided)
+    if ((Get-TrimmedText $OutputDirectory) -ne "") {
+        if ($publishTarget -ne "WINDOWS") { throw "自定义输出目录目前仅适用于 WINDOWS 目标" }
+        $script:OutputDir = [IO.Path]::GetFullPath((Join-Path $repoRoot $OutputDirectory))
+        $outputRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'publish/output')).TrimEnd('\')
+        if ($script:OutputDir -ne $outputRoot -and -not $script:OutputDir.StartsWith($outputRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Windows 输出目录必须位于 publish/output 内"
+        }
+    }
 
     Invoke-WithTemporaryWailsVersion {
         Reset-PublishWorkspace
@@ -919,13 +937,13 @@ try {
     Write-Section "✓ 发布完成！"
     Write-Host ""
     if ($script:WindowsInstallerDone) {
-        Write-Host "Windows 安装包: publish\output\LianXiangBrowser-Setup-$script:ResolvedVersion.exe"
+        Write-Host "Windows 安装包: $script:OutputDir\LianXiangBrowser-Setup-$script:ResolvedVersion.exe"
     }
     if ($script:WindowsBinaryDone) {
-        Write-Host "Windows 本地 EXE: publish\output\LianXiangBrowser-$script:ResolvedVersion-windows-amd64.exe"
+        Write-Host "Windows 本地 EXE: $script:OutputDir\LianXiangBrowser-$script:ResolvedVersion-windows-amd64.exe"
     }
     if ($script:WindowsPortableDone) {
-        Write-Host "Windows 便携包: publish\output\LianXiangBrowser-$script:ResolvedVersion-windows-amd64-portable.zip"
+        Write-Host "Windows 便携包: $script:OutputDir\LianXiangBrowser-$script:ResolvedVersion-windows-amd64-portable.zip"
     }
     if ($script:LinuxDone) {
         Write-Host "Linux 产物目录: publish\output\"
@@ -937,7 +955,8 @@ try {
         Write-ReleaseChecksums
     }
     Write-Host ""
-    Write-Host "提示：用户安装后可将旧的 data\ 目录粘贴到安装目录覆盖初始数据"
+    Write-Host "实际输出目录: $script:OutputDir"
+    Write-Host "升级时沿用现有数据目录，不要用发布包的默认配置覆盖个人配置。"
     exit 0
 }
 catch {

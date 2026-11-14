@@ -1,482 +1,149 @@
 # 链享浏览器
 
-> 面向多账号隔离、代理绑定和本地环境管理的桌面浏览器工具（Windows / Linux / macOS unsigned）。
+在本地管理多个独立的 Chrome 浏览器环境，统一配置代理、内核、书签、插件和自动化任务。
 
-[![Release](https://img.shields.io/github/v/release/wuyingzhishang/LianXiang-Browser?sort=semver)](https://github.com/wuyingzhishang/LianXiang-Browser/releases)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](https://github.com/wuyingzhishang/LianXiang-Browser/releases)
-[![Issues](https://img.shields.io/github/issues/wuyingzhishang/LianXiang-Browser)](https://github.com/wuyingzhishang/LianXiang-Browser/issues)
+**当前版本：v1.9.4 · 2026-11-15**
 
-当前版本：`1.9.3` · 2026-09-29
+[下载发行版](https://github.com/wuyingzhishang/LianXiang-Browser/releases) · [v1.9.4 更新说明](RELEASE-NOTES-v1.9.4.md) · [更新日志](CHANGELOG.md) · [反馈问题](https://github.com/wuyingzhishang/LianXiang-Browser/issues)
 
-## 推荐内核项目
+## v1.9.4 更新
 
-链享浏览器 当前推荐配套使用的浏览器内核，来源于开源项目 [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)。
+- **书签管理**：支持分组、排序、导入，以及全局或针对单个实例的启用控制。
+- **导入 Chrome 本地多开数据**：把已有 `--user-data-dir` 复制为独立实例，保留源目录；导入前检查占用，自动跳过缓存和临时锁文件。
+- **退出更顺畅**：启用 WebView2 默认 GPU 加速，简化弹窗动画，移除固定等待，让后台清理与界面响应分开执行。
+- **接口兼容**：统一桌面命令、事件和窗口操作入口，保持原有参数、结果和错误语义。
+- **Windows 发布集更新**：提供安装包、本地 EXE、便携 ZIP 和统一 SHA-256 校验文件。
 
-如果你正在寻找可直接下载和维护的指纹内核版本，建议先查看它的 Releases 页面：
+本版继续使用 **Go + Wails + React**。Windows 前端通过系统 **WebView2** 渲染，没有切换到 Rust/Tauri，也没有更改数据库结构、配置格式或实例数据路径。
 
-- <https://github.com/adryfish/fingerprint-chromium/releases>
+## 选择下载文件
 
-这个项目为 链享浏览器 的内核准备提供了直接可用的基础来源，这里先对原项目做明确推荐与致谢。
+本次发行提供 Windows x64 产物。Linux 和 macOS 的源码构建说明保留在仓库中，v1.9.4 本次未生成这两个平台的安装包。
 
-链享浏览器 的目标很明确：在一台桌面设备上，帮助用户稳定管理多个彼此隔离的浏览器实例，并配合代理池、浏览器内核和快捷启动能力完成日常运营或测试工作。
+| 文件 | 适合的用途 |
+| --- | --- |
+| `LianXiangBrowser-Setup-1.9.4.exe` | 常规安装或在原安装目录覆盖升级 |
+| `LianXiangBrowser-1.9.4-windows-amd64-portable.zip` | 解压后运行，包含主程序、Xray、sing-box 和默认配置 |
+| `LianXiangBrowser-1.9.4-windows-amd64.exe` | 单独的主程序，适合更新已有完整目录；不包含代理运行时和浏览器内核 |
+| `SHA256SUMS.txt` | 核验以上三个文件是否与本次构建一致 |
 
-## 目录
+程序需要 Microsoft Edge WebView2 Runtime。本次安装包和便携包**不包含 Chrome 内核或用户数据库**；首次使用时在“内核管理”中下载或导入兼容内核。推荐使用 [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) 提供的内核，并遵守其许可证。
 
-- [项目简介](#项目简介)
-- [近期更新](#近期更新)
-- [更新日志](CHANGELOG.md)
-- [核心特性](#核心特性)
-- [界面预览](#界面预览)
-- [Star History](#star-history)
-- [快速开始](#快速开始)
-- [常用操作](#常用操作)
-- [常见问题](#常见问题)
-- [Roadmap](#roadmap)
-- [开发与发布文档](#开发与发布文档)
-- [贡献](#贡献)
-- [支持与反馈](#支持与反馈)
-- [License](#license)
+下载后可使用 PowerShell 核对文件：
 
-## 项目简介
-
-链享浏览器 适合以下场景：
-
-- 多账号环境隔离
-- 跨境电商与社媒账号运营
-- 需要独立代理出口的本地测试
-- 需要统一管理浏览器内核和实例配置的团队
-
-这个项目当前提供的核心价值是：
-
-- 给每个账号分配独立浏览器实例
-- 给每个实例绑定独立代理
-- 统一管理浏览器内核、标签、关键字和快捷打开码
-- 在本地保存配置和运行数据，便于自主控制
-
-## 近期更新
-
-### 1.9.3 · 2026-09-29
-
-- 启动提速：数据目录同步改为指纹校验，残留进程检查先走进程快照，回收站清理延后执行；实测后端启动耗时由约 9.8 秒降至约 0.05 秒。
-- 列表加载：前端等待 `app:ready` 就绪信号后一次加载列表数据，不再空列表轮询重试。
-- 界面精简：移除侧边栏“关于我”入口及对应的个人介绍页面。
-- 实例启动稳定性：启动前清理无活动浏览器留下的 Chrome 单实例锁，降低升级或异常退出后实例在就绪前退出的问题。
-- Windows 发布集：重新生成本地 EXE、NSIS 安装包和便携 ZIP，三个产物及其 SHA-256 统一写入一个 `SHA256SUMS.txt`。
-- 发布维护：清理旧版本发行产物和临时 staging，发布目录只保留当前版本文件与说明文档。
-
-### 1.9.2 · 2026-09-24
-
-- Windows 安装包重构：统一生成 NSIS 安装包、本地 EXE、便携 ZIP，并将产物 SHA-256 汇总到单一文本文件。
-- 数据目录设置：误选 `Program Files` 安装目录时自动改用当前用户可写目录，并在保存后显示实际数据位置。
-- 数据目录设置：无写入权限时显示具体原因和可写目录建议，避免笼统的保存失败提示。
-- 安装路径兼容：保留 `D:\Program Files\链享浏览器` 等既有安装位置，用户数据目录和单实例状态不迁移、不删除。
-- 发布清理：每次发布前清理旧的输出和临时 staging，避免旧版本文件混入发行包。
-
-### 1.9.1 · 2026-09-23
-
-- 修复受保护安装目录启动：Windows 安装到 `Program Files` 时，运行数据和单实例锁自动放到用户可写目录，避免首次安装后再次打开无响应。
-- 修复单实例唤醒：回环激活通道连接失败时，仍尝试通过系统窗口 API 唤醒已有窗口。
-- 保持便携版行为：安装到普通可写目录时，数据仍保留在应用目录。
-- 完整提供 Windows 安装包、本地 EXE、便携 ZIP 和 SHA-256 校验文件。
-
-### 1.9.0 · 2026-09-22
-
-- 数据目录设置：可在系统设置中自由选择应用数据目录，支持查看当前目录、浏览选择和关闭自定义目录。
-- 重启后持久化：目录选择保存到稳定的用户状态配置，退出后再次启动仍使用同一个目录。
-- 数据迁移与恢复：支持迁移 `data`、`chrome` 和配置文件；启动时自动补齐空目录和旧版本遗留的空数据库，避免实例列表消失。
-- 启动稳定：安装到 Windows 受保护目录（例如 `Program Files`）时，运行数据和单实例状态自动放到用户可写目录；便携版或普通可写目录仍使用安装目录。需要放到其他位置时可在系统设置中选择自定义目录。
-- 发布产物：本版本提供 Windows 本地 EXE、NSIS 安装包、便携 ZIP，以及集中记录三个产物 SHA-256 的汇总文件。
-
-### 1.8.3 · 2026-09-22
-
-- 书签功能增强：支持书签分组、全局禁用和单实例禁用配置，完整移植二开版本书签表扩展能力
-- 数据库迁移：新增 v19 migration 补齐书签分组和禁用字段，兼容旧安装幂等执行
-- 备份兼容：备份恢复 SQL 扩展为完整书签列集，确保跨版本恢复不丢失字段
-- 代码适配：DAO 层、业务层和备份流程全链路支持书签新增字段
-
-### 1.8.2 · 2026-09-21
-
-- 品牌统一：Go 模块名从 `ant-chrome` 迁移至 `lianxiang-browser`，统一可执行文件名为 `lianxiang-browser.exe`，与主分支版本命名保持一致。
-- 数据兼容：确保与主分支 1.4.6 及后续版本的数据目录兼容性，升级后无缝迁移用户配置和浏览器实例数据。
-- 构建规范：更新所有构建脚本、发布脚本和诊断工具引用，移除 `ant-chrome` 残留文件，确保发布产物命名一致性。
-- 依赖安全：升级前端依赖至修复版本，解决已知安全漏洞。
-
-### 1.8.0 · 2026-09-03
-
-- 备份渠道：支持本地、OpenList 和 S3（含兼容服务）三种备份位置。
-- 备份范围：支持全量备份，也支持按实例选择性备份；远程历史支持扫描、下载和恢复。
-- OpenList 定时备份：支持每日执行时间、最近执行状态和失败反馈；实例仍在运行时跳过本次任务。
-- 凭据保护：OpenList Token、S3 访问凭据仅保存到本地敏感配置 `backup.local.yaml`，界面默认脱敏并支持按需显示。
-- 恢复安全：备份包增加清单校验、路径校验和解压限制；恢复保留兼容字段，并按当前机器重新映射实例与外部内核路径。
-- 代理连接栈：明确区分 `xray` + sing-box 组合栈与独立 `mihomo` 栈，统一代理测速、连通性、预热和运行时下载流程。
-- 设置维护：新增系统设置重置，并增加定时备份的配置保护；开发入口整理为 `bat\dev.bat` 和 `scripts/dev.sh`。
-
-### 1.7.0 · 2026-08-17
-
-- 实例窗口标识：Windows 运行实例使用独立窗口图标，右上角显示 1-10 / A-Z 角标，窗口标题左侧同步显示运行码
-- 应用图标：统一桌面快捷方式、应用窗口与侧边栏 Logo 的白色背景和蓝色指纹线稿标识
-- 全局备份与恢复：覆盖应用配置、数据库和浏览器数据，仅支持保留现有数据的合并导入、进度展示和导出日志
-- OpenList 备份渠道：配置归档到 `backup.channels.openlist`，使用 Token 认证；Token 仅保存在本地敏感配置 `backup.local.yaml`
-- S3 渠道配置：增加 AWS S3 及兼容服务的 Endpoint、Region、Bucket、对象前缀、Path Style 和访问凭据配置；完整远程备份流程在 1.8.0 完善
-- 备份恢复一致性：保留数据库迁移字段，兼容旧版本备份列缺失，按当前机器归一化实例/内核路径并按 `coreId` 映射外部内核
-- 维护安全：浏览器停止失败时中止备份导入，避免未完成的维护操作继续写入数据
-- 通知中心：支持按全部、未读、错误和警告筛选，批量标记已读、清空通知和跳转相关页面
-- 运行稳定性：改善浏览器异常退出、停止状态、托盘操作以及应用启动和关闭阶段的反馈
-- 退出诊断：新增应用生命周期日志和 Windows 只读退出诊断监视器，便于定位异常退出问题
-- 代理兼容：修复 Clash 配置中 `null` 值导致的导入解析失败
-
-### 1.6.0 · 2026-08-11
-
-- 插件持久化：支持保存插件安装包、安装记录和实例插件配置，实例启动时自动恢复已配置插件
-- 插件迁移：实例备份导入后自动修复插件安装目录、安装包和运行备份路径
-- 指纹处理：跨平台画像使用宿主真实字体避免中日韩文字缺失，删除实例时同步清理指纹检测缓存
-- 窗口启动：保留配置的启动窗口尺寸，仅在超出桌面工作区时收缩
-
-
-### 1.5.0 · 2026-07-25
-
-- 代理增强：支持 HTTPS 代理桥接，完善代理导入、测速和连接可用性处理
-- 实例安全：增加实例删除数据审计，避免误删用户数据目录时缺少确认依据
-- 会话恢复：新增实例最近会话恢复配置，创建、复制、更新和启动流程保持一致
-- 启动服务：补充启动 API 服务端口设置，设置页可查看当前地址并保存偏好端口
-- 界面优化：精简代理池导入流程，新增代理池使用说明入口，减少页面信息堆叠
-
-### 1.4.0 · 2026-07-15
-
-- VPN 优化：完善代理/VPN 检测展示，可直接查看配置代理、认证状态、浏览器出口 IP、ASN/网络、多源归属冲突和来源明细，避免单一 IP 库误判
-- 指纹优化：优化指纹检测页的基线、修改前后对比、自动刷新和启动逻辑；Linux / macOS 指纹环境自动切换英文，避免中文字体缺失导致方块字
-- 移除控制台栏目，应用启动后直接进入实例列表，减少无用入口
-- 增强观测能力：提供指纹识别页面
-
-### 1.3.0 · 2026-06-23
-
-- 自动化增强：完善自动化脚本导入、运行、目标实例选择和执行记录管理，提升多实例自动化编排能力
-- 插件管理：新增插件包管理能力，支持插件安装、导入、启停、删除、实例限制和单实例插件配置
-- VPN 优化：优化代理/VPN 连接链路，完善 Xray、sing-box、Mihomo 等连接栈的启动、测速、检测和预热能力
-- 实例迁移：支持实例导入导出，可将实例配置和完整浏览器用户数据目录打包迁移到新环境
-- 代理适配：实例导入时按代理名称匹配本地同名代理，匹配不到或同名不唯一时自动清空代理
-- 界面优化：优化实例列表、关键字展示、操作菜单和导入导出入口，减少页面拥挤和无效信息
-
-### 1.2.0 · 2026-05-09
-
-- 重点升级接口调用：Launch API 补齐实例增删改查、按 code / selector 启动、runtime session / status / stop 和统一 CDP 入口，方便外部系统直接调用浏览器能力
-- 完善自动化接口链路：脚本执行支持 selector / params 覆盖和 `timeoutMs` 超时控制，双实例 runtime 流程支持超时取消与错误返回
-- 增强代理池：新增链式代理导入、编辑和预览能力，支持 HTTP / SOCKS5 两层链路，并优化直连代理批量导入
-- 优化代理检测：新增测速目标、IP 健康检测目标和桥接启动超时配置，链式代理也可以参与测速与健康检测
-- 改进实例启动：代理异常时支持本次直连启动，不修改实例原有代理配置；默认代理池只保留直连节点
-- 升级书签能力：新增 IP 检测站点默认书签，支持设置启动时自动打开，并可同步到已有未运行实例
-
-### 1.1.0 · 2026-03-19
-
-- 完善 Linux 支持：补齐 Linux 环境下的开发、打包、安装、启动与运行链路，并持续修复安装版启动与退出稳定性问题
-- 补齐 macOS unsigned 内测构建链路：支持在原生 macOS 主机上打包 `.app` / `.zip`，并将用户状态目录放到 `~/Library/Application Support/lianxiang-browser`
-- 新增 SOCKS 代理测试支持：SOCKS 代理能力已进入测试阶段，后续会继续验证稳定性与兼容性
-- 实验性支持接口触发浏览器：支持通过接口启动浏览器实例，便于后续接入自动化流程
-
-完整历史版本记录见 [CHANGELOG.md](CHANGELOG.md)。
-
-## 源码分支说明
-
-- `master`：面向开发者的干净基线分支，不提交 `data/app.db`、实例目录或其他用户数据。首次启动时会自动初始化空数据库。
-- `user_data`：在 `master` 基础上额外提交一份 `data/app.db` 测试快照，便于演示、联调和复现问题。
-- 代理运行时 `bin/xray.exe`、`bin/sing-box.exe` 已随源码仓库提供；开发和发布打包不需要再单独下载这些运行时文件。
-
-## 核心特性
-
-- 实例隔离管理：支持创建、编辑、启动、停止、重启、克隆和删除浏览器实例
-- 代理池配置：支持统一维护代理节点，并将代理分配到具体实例
-- 多协议支持：支持常见代理配置方式，并支持导入 Clash
-- 内核管理：支持维护多个 Chrome 内核版本，并设置默认内核
-- 快捷启动：支持通过实例 Code 和 `Ctrl + K` 快速打开目标实例
-- 标签与检索：支持按标签、关键字、状态、代理、内核、分组进行筛选
-- 自动化脚本：支持脚本导入、运行、目标实例选择、执行记录和外部接口调用
-- 插件管理：支持插件安装、导入、启停、删除、实例限制和单实例插件配置
-- 实例迁移：支持将实例配置和浏览器用户数据目录导出为 ZIP，并导入为新实例
-- 备份与恢复：支持本地、OpenList、S3 备份位置，以及全量和选择性实例备份
-- 远程历史：支持扫描远程备份列表，下载后恢复到本机
-- VPN / 代理检测：支持连接栈预热、测速、IP 健康检测和代理异常处理
-- 设置维护：支持系统设置重置，敏感备份凭据不写入普通配置文件
-- 本地化存储：配置和实例数据保存在本地，适合长期使用和备份
-
-## 界面预览
-
-### 1. 实例列表
-
-<img src="images/readme/002-实例列表.png" alt="实例列表" width="100%" />
-
-对应功能点：
-
-- 统一查看和管理所有浏览器实例
-- 按状态、代理、内核、分组、关键字筛选实例
-- 支持 `新建配置`、启动、停止、重启、配置、克隆、删除
-- 给实例分配快捷打开码，后续可以直接快速启动
-
-### 2. 代理池配置
-
-<img src="images/readme/003-设置代理池.png" alt="代理池配置" width="100%" />
-
-对应功能点：
-
-- 统一管理代理节点
-- 支持按协议、分组筛选代理
-- 支持手动维护代理和导入 Clash
-- 支持查看延迟、IP 健康并挑选可用节点
-
-代理连接栈规则：
-
-- `default_connector_type` 只有两套连接栈：`xray` 和 `mihomo`。
-- `xray` 表示 Xray + sing-box 组合栈：Xray 负责 vmess/vless/trojan/shadowsocks/链式代理等，sing-box 负责 hysteria2/tuic/anytls 等协议。
-- `mihomo` 表示独立 Mihomo 栈：需要桥接的代理统一走 mihomo。
-- 实例启动、代理测速、真实连通性、IP 健康、预热和插件下载代理必须按当前连接栈执行；不得在 `xray` 组合栈和 `mihomo` 栈之间自动混用。
-- 详细约束见 [VPN / 代理协议审计报告](docs/audits/vpn-protocol-audit-report.md)。
-
-### 3. 代理生效验证
-
-<img src="images/readme/004-自定义代理.png" alt="代理生效验证" width="100%" />
-
-对应功能点：
-
-- 启动实例后访问 IP 检测网站验证代理是否真正生效
-- 检查 IP 地区、ASN、运营商和风险值等信息
-- 用于确认当前实例是否已经走目标代理出口
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=wuyingzhishang%2FLianXiang-Browser&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wuyingzhishang/LianXiang-Browser&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wuyingzhishang/LianXiang-Browser&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wuyingzhishang/LianXiang-Browser&type=date&legend=top-left" />
-  </picture>
-</a>
+```powershell
+Get-FileHash .\LianXiangBrowser-Setup-1.9.4.exe -Algorithm SHA256
+Get-Content .\SHA256SUMS.txt
+```
 
 ## 快速开始
 
-### 环境要求
+1. 安装程序，或将便携包解压到有写入权限的目录，运行 `lianxiang-browser.exe`。
+2. 打开“内核管理”，下载或导入浏览器内核，并设置默认内核。
+3. 如需代理，在“代理池配置”中新增或导入节点，按当前连接栈测试连通性。
+4. 在“实例列表”中新建配置，选择名称、内核、代理和启动参数。
+5. 启动实例。使用 `Ctrl + K` 可按名称、标签或快捷码查找并启动实例。
 
-- 操作系统：
-  - Windows 10 / 11（64 位）
-  - Linux（amd64 / arm64）
-  - macOS（amd64 / arm64，当前为 unsigned 内测包）
-- 建议内存：8 GB 及以上
-- 建议磁盘空间：2 GB 以上
+## 主要功能
 
-### 下载与运行
+| 功能 | 说明 |
+| --- | --- |
+| 实例管理 | 新建、配置、启动、停止、重启、克隆、回收与筛选 |
+| 环境隔离 | 每个实例使用独立用户数据目录，可单独指定内核和代理 |
+| 代理池 | 节点导入、分组、测速、真实连通性和 IP 健康检查 |
+| 书签管理 | 分组、排序、导入、同步及实例范围控制 |
+| Chrome 数据导入 | 将已有本地 Chrome 用户数据目录复制为新实例 |
+| 插件管理 | 导入和维护插件包，设置启用范围与实例配置 |
+| 自动化 | 导入脚本、选择目标实例、运行任务并查看执行记录 |
+| 备份与恢复 | 本地、OpenList、S3；支持全量与选择性实例备份 |
+| 快捷启动 | `Ctrl + K`、实例快捷码及本地启动接口 |
 
-1. 前往 Releases 页面下载最新版本：<https://github.com/wuyingzhishang/LianXiang-Browser/releases>
-2. 安装版直接运行 `LianXiangBrowser-Setup-*.exe`
-3. 便携版解压后运行 `lianxiang-browser.exe`
-4. Linux 包下载后可直接安装 `lianxiang-browser_<version>_<arch>.deb`，或解压 `tar.gz` 后运行 `lianxiang-browser`
-5. macOS unsigned 包解压后运行 `LianXiangBrowser-<version>-macos-<arch>.app`；如被 Gatekeeper 拦截，请对本机测试包执行 `xattr -dr com.apple.quarantine <app路径>` 后再打开
+![实例列表](images/readme/002-实例列表.png)
 
-### 从源码运行
+![代理池配置](images/readme/003-设置代理池.png)
 
-1. 开发默认使用 `master` 分支；该分支不带测试用户数据，适合作为日常开发基线。
-2. 如需带测试库的演示环境，请切换到 `user_data` 分支。
-3. Windows 统一执行 `bat\dev.bat`；默认是 `stable` 静态资源模式，需要热更新时使用 `bat\dev.bat live`，需要受限内存复现时使用 `bat\dev.bat limited`。
-4. Windows 运行时使用 `bin/xray.exe`、`bin/sing-box.exe`；Linux 运行时使用 `bin/linux-<arch>/xray`、`bin/linux-<arch>/sing-box`；macOS 运行时使用 `bin/darwin-<arch>/xray`、`bin/darwin-<arch>/sing-box`。
-5. 运行时文件采用“仓库固定 + 哈希校验”，校验清单在 `publish/runtime-manifest.json`，固定来源清单在 `publish/runtime-sources.json`。
-6. 如需刷新 Linux / macOS 运行时，执行 `python3 tools/runtime/sync-runtime.py --target <target>`（会按固定来源下载、校验归档并更新 manifest）。
+截图仅展示主要操作，具体界面以当前版本为准。
 
-开发模式说明：
+## 导入已有 Chrome 环境
 
-- `bat\dev.bat`：默认 `stable` 模式，先构建 `frontend/dist`，再以静态资源模式启动 Wails
-- `bat\dev.bat stable`：先构建 `frontend/dist`，再以静态资源模式启动 Wails，不依赖外部 Vite dev server
-- `bat\dev.bat live`：启动 Vite watcher，并通过 `-frontenddevserverurl` 接入桌面壳
-- `bat\dev.bat limited`：在 `live` 基础上为 watcher 与其子进程附加 Windows Job Object 内存限制
-- Linux shell 入口：`./scripts/dev.sh` 默认使用 `stable`，也可传入 `live` 或 `help`
-- 如需为依赖下载配置代理，可在启动前设置 `DEV_PROXY_URL`、`DEV_NO_PROXY`、`DEV_GOPROXY`
+在“实例列表 → 导入实例 → Chrome 用户数据目录”中选择“选择目录并导入”。可先填写导入后的实例名称。
 
-### 自动化脚本包
-
-自动化脚本现在分成两层：
-
-- 仓库里的可提交 demo 脚本库：`backend/internal/automation/demo-library/`
-- 本地运行时 / 用户自定义脚本：`data/automation/scripts/`
-
-规则是：
-
-- 只有 demo 脚本库里的脚本会提交到 git
-- `data/automation/scripts/` 下的运行时脚本统一忽略，不提交 git
-- 默认只同步三个 demo：`dual-instance-runtime-switch`、`news-query-txt`、`web-image-generate-download`
-
-脚本包采用“一脚本一目录”的可搬运结构：
+选择的是包含 `Local State` 和 `Default` / `Profile *` 子目录的**用户数据根目录**，不是单独的 `Default` 文件夹。例如，原 Chrome 启动参数为：
 
 ```text
-<script-id>/
-├── automation.script.json
-├── index.cjs
-└── 其他辅助文件
+chrome.exe --user-data-dir="D:\ChromeProfiles\account-01"
 ```
 
-其中：
+则选择 `D:\ChromeProfiles\account-01`。导入前关闭所有使用该目录的 Chrome 窗口。程序会复制到新实例目录，跳过缓存、临时锁和符号链接；复制或保存失败时回滚新建内容。
 
-- `automation.script.json`：脚本元数据和默认参数
-- `index.cjs`：入口脚本，`entryFile` 也可以改成相对路径，例如 `scripts/index.cjs`
-- 其他辅助文件：脚本依赖的本地模块、模板、静态资源
+Chrome 的登录凭据可能受 Windows 用户身份、浏览器版本和应用绑定加密限制。复制目录不保证跨机器或跨内核后仍保留全部登录状态。
 
-运行时落盘结构和分发结构不同。应用内部会把脚本写到：
+## 数据与升级
 
-```text
-data/automation/scripts/<script-id>/
-├── config
-├── index.cjs
-└── 其他辅助文件
-```
+实际数据位置以“系统设置”中的数据目录为准；安装目录和数据目录可能不同。配置、SQLite 数据库、浏览器用户数据及本地备份凭据仍沿用现有格式。
 
-这里的 `config` 是应用内部持久化格式；对外复制、导入、脚本库管理一律使用 `automation.script.json` 包结构。
+- **安装版升级**：正常退出应用后，在原安装路径覆盖安装，不需要先卸载。已有 `config.yaml` 和用户数据目录应保留。
+- **更新已有便携目录**：退出应用后更新程序和运行时文件，保留自己的 `config.yaml`、数据目录选择配置及实例数据；不要用发行包默认配置覆盖个人配置。
+- **全新使用**：发行包不携带用户数据库，首次运行会初始化本地数据。
+- **备份**：升级前可通过“备份与恢复”生成备份；本次版本更新不要求执行数据迁移或重建实例。
 
-### Windows 发布打包（源码）
+OpenList Token、S3 访问凭据保存在本地 `backup.local.yaml`，不会写入普通 `config.yaml`。不要将凭据、用户数据库、浏览器目录或备份上传到公开仓库。制作发行包只使用发布模板和程序文件。
 
-Windows 发布脚本每次先清理旧的 `publish\output\` 和 `publish\staging\`，再生成本地 EXE、NSIS 安装包、便携 ZIP 和 SHA-256 校验文件：
+## 代理连接栈
 
-```powershell
-bat\publish.bat zip
-bat\publish.bat both
-bat\publish.bat -Target WINDOWS -WindowsFormat INSTALLER
-bat\publish.bat -Target WINDOWS -WindowsFormat PORTABLE
-bat\publish.bat -Target WINDOWS -WindowsFormat BOTH
-bat\publish.bat both -Version 1.9.3
-```
+`browser.default_connector_type` 决定连接栈，启动、测速、连通性、IP 健康检查、预热及代理下载均按此配置执行。
 
-省略 `-WindowsFormat` 时等同于 `INSTALLER`；要生成完整 Windows 发布集请使用 `BOTH` 或 `both` 快捷命令。`zip` 快捷命令只生成便携 ZIP。所有产物输出到 `publish\output\`，其 SHA-256 统一记录在 `SHA256SUMS.txt`。
+| 设置 | 执行方式 |
+| --- | --- |
+| `xray` | Xray + sing-box 组合栈：Xray 处理 vmess、vless、trojan、shadowsocks、链式代理等；sing-box 处理 hysteria2、tuic、anytls 等 |
+| `mihomo` | 独立 Mihomo 栈；使用前需在应用中准备对应运行时 |
 
-Windows 输出文件：
-
-```text
-LianXiangBrowser-<version>-windows-amd64.exe
-LianXiangBrowser-Setup-<version>.exe
-LianXiangBrowser-<version>-windows-amd64-portable.zip
-SHA256SUMS.txt
-```
-
-### Linux 发布打包（源码）
-
-Linux 发布脚本位于 `publish/linux/`。
-
-```bash
-bash publish/linux/publish-linux.sh --arch amd64
-bash publish/linux/publish-linux.sh --arch arm64
-```
-
-详细说明见 [publish/linux/README.md](publish/linux/README.md)。
-
-### macOS unsigned 发布打包（源码）
-
-macOS 发布脚本位于 `publish/mac/`，必须在原生 macOS 主机上执行，且目标架构需与主机架构一致。
-
-```bash
-bash publish/mac/publish-mac.sh --arch amd64
-bash publish/mac/publish-mac.sh --arch arm64
-```
-
-脚本会生成 unsigned `.app` 和 `.zip`，适合 PR 验证与内部测试。详细说明见 [publish/mac/README.md](publish/mac/README.md)。
-
-### 准备浏览器内核
-
-代理运行时已经随仓库提供，你只需要准备浏览器内核。
-
-1. 打开应用，进入 `指纹浏览器 > 内核管理`
-2. 优先使用应用内下载功能准备内核
-3. 如果手动准备内核，请确保目录下存在 `chrome.exe`
-
-建议目录结构：
-
-```text
-chrome/
-  chrom-142/
-    chrome.exe
-    ...
-```
-
-### 第一次使用建议流程
-
-1. 在 `代理池配置` 中先导入或新增可用代理节点
-2. 在 `实例列表` 中点击 `新建配置`
-3. 选择实例名称、内核、代理、标签和需要的启动参数
-4. 返回实例列表，点击启动按钮运行实例
-5. 打开 IP 检测网站，确认代理结果是否符合预期
-
-### 备份与恢复
-
-1. 打开 `系统维护 > 备份与恢复`。
-2. 选择 `全量备份`，或选择需要迁移的实例。
-3. 选择一个或多个备份位置：本地、OpenList、S3。
-4. 从历史列表选择本地或远程备份，可下载并恢复；恢复采用合并方式，不会直接清空现有数据。
-5. 需要自动备份时，先配置 OpenList，再设置每日执行时间。
-
-OpenList Token 和 S3 访问凭据保存在应用用户配置目录中的 `backup.local.yaml`，不会写入 `config.yaml`；不要把该文件复制到公共仓库或提交到 git。
-Windows 升级或卸载旧版本时，安装器会先将旧安装目录中的 `backup.local.yaml` 迁移到该用户配置目录，避免重装丢失凭据。
-
-## 常用操作
-
-| 目标 | 入口 | 说明 |
-| --- | --- | --- |
-| 新建浏览器实例 | `实例列表 > 新建配置` | 创建一个新的独立浏览器环境 |
-| 配置代理池 | `代理池配置` | 维护代理节点并检查延迟、健康状态 |
-| 绑定实例代理 | `实例编辑页` | 给指定实例分配目标代理节点 |
-| 启动实例 | `实例列表` | 单击启动按钮即可运行目标实例 |
-| 快速打开实例 | `Ctrl + K` | 可按 Code、实例名、标签、关键字快速检索 |
-| 管理浏览器内核 | `内核管理` | 新增、编辑、删除和设置默认内核 |
-| 验证代理结果 | 启动实例后访问 IP 检测网站 | 核对 IP、地区、ASN、风险值 |
-| 备份与恢复 | `系统维护 > 备份与恢复` | 创建本地或远程备份，扫描、下载和恢复历史备份 |
-| 设置重置 | `系统维护 > 系统设置 > 重置` | 将可管理设置恢复为默认值 |
+两套栈之间不会自动混用。切换栈后应重新测速；不要将 sing-box 负责的协议视为整个 `xray` 组合栈不支持。
 
 ## 常见问题
 
-### 1. 应用无法启动怎么办？
+**主界面无法打开或出现空白？**
 
-先检查浏览器内核路径是否有效，并确认目标目录下存在 `chrome.exe`。
+检查 WebView2 Runtime 是否安装完整。主界面与 Chrome 实例使用不同的运行环境：主界面由 WebView2 渲染，实例需要另外准备 Chrome 内核。
 
-### 2. 实例启动了但代理没有生效怎么办？
+**实例启动失败？**
 
-先检查代理节点本身是否可用，再确认该实例已经正确绑定代理。建议启动后访问 IP 检测网站复核当前出口。
+检查内核路径、数据目录写入权限和代理配置；在“日志查看”中查找失败原因。
 
-如果代理池里本地客户端可用节点很多，但 链享浏览器 中“只展示可用”数量明显偏少，先确认当前 `default_connector_type` 是否与本地客户端一致。链享浏览器 不会在 `xray` 组合栈和 `mihomo` 栈之间自动混用；切换连接栈后需要重新测速。
+**退出时应该选哪一个？**
 
-### 3. 实例太多，怎么快速找到目标实例？
+“最小化到托盘”保持应用运行；“仅退出应用”保留正在运行的浏览器实例；“退出应用与浏览器”会等待浏览器和后台服务清理。清理耗时取决于实例数量及当时任务。
 
-可以在 `实例列表` 中按状态、代理、内核、分组、关键字筛选，也可以通过 `Ctrl + K` 使用实例 Code 或名称快速启动。
+**旧显卡驱动与 GPU 加速不兼容？**
 
-### 4. 多个账号怎么避免串号？
+可在启动进程时设置 `LIANXIANG_WEBVIEW_DISABLE_GPU=1` 使用软件渲染。正常情况下保留默认设置即可。
 
-建议采用一账号一实例、一实例一稳定代理的方式，不要混用浏览器环境，也不要频繁切换同一实例的出口 IP。
+## 开发与构建
 
-### 5. 备份凭据会不会写进配置文件？
+Windows 开发需要 Go、Node.js/npm、Wails CLI 和 WebView2；制作安装包还需要 NSIS。依赖版本以 `go.mod`、`frontend/package-lock.json` 为准。桌面接口测试需要 Node 22.18+ 或 24+。
 
-不会写入普通 `config.yaml`。OpenList Token 和 S3 访问凭据保存在应用用户配置目录中的本地文件 `backup.local.yaml`，界面读取时默认显示为脱敏值。
+```powershell
+# 开发启动
+bat\dev.bat
 
-## Roadmap
+# Windows v1.9.4 完整发布集
+powershell -NoProfile -ExecutionPolicy Bypass -File bat\publish.ps1 `
+  -Target WINDOWS -WindowsFormat BOTH -Version 1.9.4 `
+  -OutputDirectory publish/output/v1.9.4
+```
 
-- 完善自动化模块能力
-- 持续补充使用文档和接口说明
-- 增强实例模板、批量管理和检索体验
+发布脚本保留既有输出目录中的数据，只清理本次创建的临时 staging。校验清单只收录本次生成的文件。完整流程见 [Windows 发布说明](docs/release-windows.md)。
 
-## 贡献
+- [开发脚本](bat/README.md)
+- [构建与发布检查清单](docs/build-and-release-checklist.md)
+- [Linux 构建](publish/linux/README.md)
+- [macOS unsigned 构建](publish/mac/README.md)
+- [桌面接口契约](frontend/src/desktop/README.md)
 
-欢迎通过 Issue 和 Pull Request 参与改进。
+## 反馈、致谢与许可
 
-- Bug 反馈：请附带版本号、系统版本、复现步骤和截图
-- 功能建议：请说明业务场景、预期行为和现有问题
-- 文档优化：欢迎直接提交 README、教程和截图说明相关改进
+提交 [Issue](https://github.com/wuyingzhishang/LianXiang-Browser/issues) 时，请提供应用版本、系统版本、复现步骤以及脱敏后的日志。欢迎通过 Pull Request 改进代码和文档。
 
-如果是较大改动，建议先开 Issue 对齐需求再提交 PR。
+感谢上游 [Ant-Browser](https://github.com/black-ant/Ant-Browser)、[fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)、Wails、Xray、sing-box、Mihomo 及相关社区项目。
 
-## 开发与发布文档
-
-- Windows 开发与发布：[`bat/README.md`](bat/README.md)
-- Windows 发布产物与校验：[`docs/release-windows.md`](docs/release-windows.md)
-- Linux 打包：[`publish/linux/README.md`](publish/linux/README.md)
-- macOS unsigned 打包：[`publish/mac/README.md`](publish/mac/README.md)
-- 公共发布快照：[`tools/public-release/README.md`](tools/public-release/README.md)
-- 代理协议与连接栈：[`docs/audits/vpn-protocol-audit-report.md`](docs/audits/vpn-protocol-audit-report.md)
-
-## 支持与反馈
-
-- Releases：<https://github.com/wuyingzhishang/LianXiang-Browser/releases>
-- Issues：<https://github.com/wuyingzhishang/LianXiang-Browser/issues>
-- 感谢以下社区的支持：<https://linux.do/>
-
-## License
-
-本项目源代码使用 [PolyForm Noncommercial License 1.0.0](LICENSE)。该许可仅授予非商业用途，商业使用不在许可范围内。第三方依赖和运行时文件按各自许可证执行。
+源代码使用 [PolyForm Noncommercial License 1.0.0](LICENSE)，仅授权非商业用途。第三方依赖、运行时和浏览器内核分别遵循各自许可证。

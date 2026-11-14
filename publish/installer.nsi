@@ -1,10 +1,17 @@
 ﻿; 链享浏览器 NSIS Installer Script
-; Usage: makensis /DVERSION=1.9.3 /DSTAGINGDIR=C:\path\to\staging installer.nsi
+; Usage: makensis /DVERSION=1.9.4 /DSTAGINGDIR=C:\path\to\staging installer.nsi
 
 Unicode True
 
 !ifndef VERSION
-  !define VERSION "1.9.3"
+  !define VERSION "1.9.4"
+!endif
+
+!ifndef OUTPUTDIR
+  !define OUTPUTDIR "..\publish\output"
+!endif
+!ifndef FILEVERSION
+  !define FILEVERSION "${VERSION}.0"
 !endif
 !ifndef STAGINGDIR
   !define STAGINGDIR "..\publish\staging"
@@ -15,6 +22,10 @@ Unicode True
 !define PRODUCT_ICON    "LianXiangBrowser.ico"
 !define UNINSTALL_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\LianXiangBrowser"
 !define INSTALL_DIR     "$PROGRAMFILES64\链享浏览器"
+!define INSTALL_DIR_LEGACY "$PROGRAMFILES64\链享浏览器"
+!define INSTALL_DIR_USER "$LOCALAPPDATA\Programs\链享浏览器"
+!define ELEVATE_FLAG_INSTALL "$TEMP\lianxiang-browser-install-elevation.flag"
+!define ELEVATE_FLAG_UNINSTALL "$TEMP\lianxiang-browser-uninstall-elevation.flag"
 !define POWERSHELL_EXE  "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
 
 !include "MUI2.nsh"
@@ -328,7 +339,13 @@ Function LaunchAsCurrentUser
 FunctionEnd
 
 Name "${PRODUCT_NAME} ${VERSION}"
-OutFile "..\publish\output\LianXiangBrowser-Setup-${VERSION}.exe"
+OutFile "${OUTPUTDIR}\LianXiangBrowser-Setup-${VERSION}.exe"
+VIProductVersion "${FILEVERSION}"
+VIAddVersionKey /LANG=2052 "ProductName" "链享浏览器"
+VIAddVersionKey /LANG=2052 "ProductVersion" "${VERSION}"
+VIAddVersionKey /LANG=2052 "FileVersion" "${FILEVERSION}"
+VIAddVersionKey /LANG=2052 "FileDescription" "链享浏览器安装程序"
+VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright © 2026 链享浏览器团队"
 InstallDir "${INSTALL_DIR}"
 InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
@@ -387,14 +404,14 @@ Section "链享浏览器 (required)" SecMain
   SetOutPath "$INSTDIR\data\diagnostics"
   File /r "${STAGINGDIR}\data\diagnostics\*"
   SetOutPath "$INSTDIR"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName"     "${PRODUCT_NAME}"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion"  "${VERSION}"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher"       "链享浏览器团队"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "UninstallString" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayIcon"     "$INSTDIR\${PRODUCT_ICON}"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "NoModify"        "1"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "NoRepair"        "1"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "DisplayName"     "${PRODUCT_NAME}"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "DisplayVersion"  "${VERSION}"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "Publisher"       "链享浏览器团队"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "UninstallString" "$INSTDIR\Uninstall.exe"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "DisplayIcon"     "$INSTDIR\${PRODUCT_ICON}"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "NoModify"        "1"
+  WriteRegStr SHCTX "${UNINSTALL_KEY}" "NoRepair"        "1"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   ; 诊断看护注册的是系统级计划任务，需要管理员；用户级安装跳过，不影响主功能。
   ${If} $InstallScope == "machine"
@@ -441,6 +458,13 @@ Section "Uninstall"
     Delete "$INSTDIR\.uninstall-probe"
   ${EndIf}
 
+  ; RequestExecutionLevel already elevates the uninstaller. Do not relaunch an
+  ; administrator session and mistake its elevation flag for a failed UAC prompt.
+  UserInfo::GetAccountType
+  Pop $0
+  ${If} $0 == "Admin"
+    StrCpy $NeedElevation ""
+  ${EndIf}
   ${If} $NeedElevation == "1"
     ${If} ${FileExists} "${ELEVATE_FLAG_UNINSTALL}"
       Delete "${ELEVATE_FLAG_UNINSTALL}"

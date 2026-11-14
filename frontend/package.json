@@ -1,7 +1,7 @@
 {
   "name": "lianxiang-browser-frontend",
   "private": true,
-  "version": "1.9.3",
+  "version": "1.9.4",
   "type": "module",
   "scripts": {
     "test:desktop": "node --test tests/desktop.test.mjs",
