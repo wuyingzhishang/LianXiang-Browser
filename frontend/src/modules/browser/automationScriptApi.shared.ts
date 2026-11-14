@@ -7,13 +7,7 @@ import {
   type AutomationScriptRecord,
 } from "./automationScripts";
 
-export const getBindings = async () => {
-  try {
-    return await import("../../wailsjs/go/main/App");
-  } catch {
-    return null;
-  }
-};
+export { getDesktopBindings as getBindings } from '../../desktop'
 
 export function normalizeAutomationScriptRecord(payload: any): AutomationScriptRecord {
   const normalized = normalizeAutomationScriptRecordPayload(payload);

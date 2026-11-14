@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { FolderOpen } from 'lucide-react'
-import { BrowserOpenURL } from '../../../../wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '../../../../desktop'
 import { Button, toast } from '../../../../shared/components'
 import { openProjectRoot } from '../../api/filesystem'
 import { LaunchDocsCodeBlock } from './LaunchDocsCodeBlock'

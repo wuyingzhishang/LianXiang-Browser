@@ -12,7 +12,7 @@ import { useProxySpeedFreshness } from '../proxySpeedFreshness'
 import { isProxySpeedResultFresh } from '../pages/proxyPool/storage'
 import { useProxySpeedStore } from '../proxySpeedStore'
 import { ensureProxySpeedListener, recordProxySpeedResult, testProxySpeedOnce } from '../proxySpeedService'
-import { EventsOn } from '../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../desktop'
 import type { BrowserViewMode } from './BrowserListLayout'
 import { KeywordInlineRow, LaunchCodeCell } from './BrowserListWidgets'
 

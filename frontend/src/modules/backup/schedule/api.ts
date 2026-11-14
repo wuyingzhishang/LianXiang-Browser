@@ -29,13 +29,7 @@ export const defaultScheduledBackupSettings: ScheduledBackupSettings = {
   recentBackupTimes: [],
 }
 
-const getBindings = async () => {
-  try {
-    return await import('../../../wailsjs/go/main/App')
-  } catch {
-    return null
-  }
-}
+import { getDesktopBindings as getBindings } from '../../../desktop'
 
 function normalizeScheduledBackupSettings(raw: any): ScheduledBackupSettings {
   const status = typeof raw?.status === 'string' ? raw.status : defaultScheduledBackupSettings.status

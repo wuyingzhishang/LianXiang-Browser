@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 
-import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../desktop'
 
 import { fetchAutomationState } from '../api'
 import type { AutomationState } from '../api'
@@ -50,10 +50,7 @@ export function useSettingsProgressEffects({
       }
     }
 
-    EventsOn('automation:runtime:progress', onAutomationProgress)
-    return () => {
-      EventsOff('automation:runtime:progress')
-    }
+    return EventsOn('automation:runtime:progress', onAutomationProgress)
   }, [setAutomationProgress, setAutomationState])
 
 }

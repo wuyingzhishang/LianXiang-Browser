@@ -1,6 +1,6 @@
 import { createBrowserProfile, deleteBrowserProfile } from './profiles'
 import { fetchLaunchServerInfo } from './launch'
-import { getBindings, getGoApp, getMockProfiles, nowISOString } from './runtime'
+import { getBindings, getDesktopApp, getMockProfiles, nowISOString } from './runtime'
 import { startBrowserInstance, stopBrowserInstance } from './instances'
 
 export interface AutomationDemoResult {
@@ -77,7 +77,7 @@ async function callAutomationDemoBinding(methodName: string, args: any[] = []): 
     return await bindings[methodName](...args)
   }
 
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (typeof goApp?.[methodName] === 'function') {
     return await goApp[methodName](...args)
   }

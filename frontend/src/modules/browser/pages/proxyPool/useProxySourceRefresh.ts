@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '../../../../shared/components'
 import type { BrowserProxy } from '../../types'
 import { refreshProxySource } from '../../api'
-import { EventsOn } from '../../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../../desktop'
 import { collectURLImportSources, parseTimestampMs } from './helpers'
 
 // 与后端调度器 proxySourceRefreshFailureRetry 对齐的失败冷却窗口。

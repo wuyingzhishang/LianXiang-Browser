@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { Button, FormItem, Input, Modal, toast } from '../../../../shared/components'
-import { BrowserOpenURL } from '../../../../wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '../../../../desktop'
 import type { BrowserProxy } from '../../types'
 import type { CoreDownloadForm, CoreDownloadProgress } from '../coreManagement.types'
 import { FINGERPRINT_CHROMIUM_RELEASES_URL } from './coreDownloadRecommendation'

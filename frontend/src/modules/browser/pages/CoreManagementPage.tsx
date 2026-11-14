@@ -4,7 +4,7 @@ import { Badge, Button, Card, ConfirmModal, Table, toast } from '../../../shared
 import type { TableColumn } from '../../../shared/components/Table'
 import type { BrowserCore, BrowserCoreInput, BrowserCoreValidateResult, BrowserSettings, BrowserCoreExtended, BrowserProxy } from '../types'
 import { fetchBrowserCores, saveBrowserCore, deleteBrowserCore, setDefaultBrowserCore, validateBrowserCorePath, openCorePath, fetchBrowserSettings, saveBrowserSettings, fetchCoreExtendedInfo, scanBrowserCores, importLocalBrowserCore, BrowserCoreDownload, fetchBrowserProxies, redownloadBrowserCore } from '../api'
-import { Environment, EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime'
+import { Environment, EventsOn } from '../../../desktop'
 import { CoreDownloadModal } from './coreManagement/CoreDownloadModal'
 import { CoreEditModal } from './coreManagement/CoreEditModal'
 import { CoreSettingsCard } from './coreManagement/CoreSettingsCard'
@@ -86,7 +86,7 @@ export function CoreManagementPage() {
         setDownloadProgress(null) // 清理进度使其可以重新开始
       }
     }
-    EventsOn('download:progress', onDownloadProgress)
+    const offDownload = EventsOn('download:progress', onDownloadProgress)
 
     const onImportProgress = (data: { phase: string; progress: number; message: string }) => {
       setImportProgress(data)
@@ -94,11 +94,11 @@ export function CoreManagementPage() {
         setTimeout(() => setImportProgress(null), 1200)
       }
     }
-    EventsOn('core-import:progress', onImportProgress)
+    const offImport = EventsOn('core-import:progress', onImportProgress)
 
     return () => {
-      EventsOff('download:progress')
-      EventsOff('core-import:progress')
+      offDownload()
+      offImport()
     }
   }, [])
 

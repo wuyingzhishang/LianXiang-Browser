@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from '../../../../shared/components'
-import { EventsOn } from '../../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../../desktop'
 import {
   browserProxyBatchCheckIPHealth,
   browserProxyBatchWarmupBridge,

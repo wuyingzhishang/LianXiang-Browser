@@ -1,5 +1,5 @@
 ﻿import type { BrowserProxy, ProxyBridgeWarmupResult, ProxyCoreDownloadInfoResult, ProxyCoreStatusResult, ProxyIPHealthResult, ProxyLocationResolveResult, ProxySourceRefreshResult, ProxySpeedTestResult, ProxyVirtualGroupHealth, ProxyVirtualGroupProbeResult, SourceAlignRecord } from '../types'
-import { getBindings, getGoApp, getMockProxies, nowISOString, setMockProxies } from './runtime'
+import { getBindings, getDesktopApp, getMockProxies, nowISOString, setMockProxies } from './runtime'
 
 import type { BrowserProxyVirtualGroup } from '../types'
 
@@ -39,7 +39,7 @@ export async function fetchSourceAlignRecords(sourceId: string): Promise<SourceA
   if (bindings?.BrowserProxyAlignRecords) {
     return (await bindings.BrowserProxyAlignRecords(trimmed)) || []
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserProxyAlignRecords) {
     return (await goApp.BrowserProxyAlignRecords(trimmed)) || []
   }
@@ -116,7 +116,7 @@ export async function fetchBrowserProxyVirtualGroups(): Promise<BrowserProxyVirt
       await withBackendStartupRetry(() => bindings.BrowserProxyVirtualGroupList()),
     )
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserProxyVirtualGroupList) {
     return normalizeBrowserProxyVirtualGroups(
       await withBackendStartupRetry(() => goApp.BrowserProxyVirtualGroupList()),
@@ -157,7 +157,7 @@ export async function saveBrowserProxyVirtualGroup(group: BrowserProxyVirtualGro
     await bindings.SaveBrowserProxyVirtualGroup(group)
     return true
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.SaveBrowserProxyVirtualGroup) {
     await goApp.SaveBrowserProxyVirtualGroup(group)
     return true
@@ -182,7 +182,7 @@ export async function deleteBrowserProxyVirtualGroup(groupId: string): Promise<b
     await bindings.DeleteBrowserProxyVirtualGroup(groupId)
     return true
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.DeleteBrowserProxyVirtualGroup) {
     await goApp.DeleteBrowserProxyVirtualGroup(groupId)
     return true
@@ -221,7 +221,7 @@ export async function fetchClashImportFromURL(targetURL: string, proxyId = ''): 
     )
   }
 
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (trimmedProxyId && goApp?.BrowserProxyFetchClashByURLWithProxy) {
     return (
       (await goApp.BrowserProxyFetchClashByURLWithProxy(targetURL, trimmedProxyId)) || {
@@ -266,7 +266,7 @@ export async function refreshProxySource(sourceId: string, proxyId = ''): Promis
   if (bindings?.BrowserProxyRefreshSource) {
     return (await bindings.BrowserProxyRefreshSource(trimmedSourceId, trimmedProxyId)) || emptyResult
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserProxyRefreshSource) {
     return (await goApp.BrowserProxyRefreshSource(trimmedSourceId, trimmedProxyId)) || emptyResult
   }
@@ -287,7 +287,7 @@ export async function updateProxySourceConfig(
     await bindings.BrowserProxyUpdateSourceConfig(trimmedSourceId, autoRefresh, intervalM, fetchProxyId.trim())
     return true
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserProxyUpdateSourceConfig) {
     await goApp.BrowserProxyUpdateSourceConfig(trimmedSourceId, autoRefresh, intervalM, fetchProxyId.trim())
     return true
@@ -304,7 +304,7 @@ export async function setSourceIgnoredProxyNames(sourceId: string, names: string
     await bindings.BrowserProxySetSourceIgnoredNames(trimmedSourceId, names)
     return true
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserProxySetSourceIgnoredNames) {
     await goApp.BrowserProxySetSourceIgnoredNames(trimmedSourceId, names)
     return true

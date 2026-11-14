@@ -8,30 +8,25 @@ import { AppRoutes } from "./routes/AppRoutes";
 import { lazyNamed } from "./routes/lazyNamed";
 import { useNotificationStore } from "./store/notificationStore";
 import { useBackupStore } from "./store/backupStore";
-import { installWailsOperationLogger } from "./utils/wailsOperationLogger";
-import {
-  ForceQuit as ForceQuitApp,
-  QuitAppOnly as QuitAppOnlyApp,
-} from "./wailsjs/go/main/App";
+import { installDesktopOperationLogger } from "./utils/desktopOperationLogger";
 import {
   Environment,
+  EventsOn,
+  invokeDesktop,
   WindowHide,
   WindowMinimise,
-} from "./wailsjs/runtime/runtime";
+} from './desktop';
 
 const QuickLaunchModal = lazyNamed(
   () => import("./modules/browser/components/QuickLaunchModal"),
   "QuickLaunchModal",
 );
 
-function useWailsNotifications() {
+function useDesktopNotifications() {
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   useEffect(() => {
-    const runtime = (window as any).runtime;
-    if (!runtime?.EventsOn) return;
-
-    const offCrashed = runtime.EventsOn(
+    const offCrashed = EventsOn(
       "browser:instance:crashed",
       (data: { profileId: string; profileName: string; error: string }) => {
         const action = data.profileId
@@ -53,7 +48,7 @@ function useWailsNotifications() {
       },
     );
 
-    const offBridgeFailed = runtime.EventsOn(
+    const offBridgeFailed = EventsOn(
       "proxy:bridge:failed",
       (data: { profileId: string; profileName: string; error: string }) => {
         const action = data.profileId
@@ -73,7 +68,7 @@ function useWailsNotifications() {
       },
     );
 
-    const offBridgeDied = runtime.EventsOn(
+    const offBridgeDied = EventsOn(
       "proxy:bridge:died",
       (data: { key: string; error: string; proxyIds?: string[]; profileIds?: string[] }) => {
         const proxyIds = data.proxyIds?.filter(Boolean) || [];
@@ -165,10 +160,7 @@ function CloseConfirmModal() {
   const quitting = quittingAction !== null;
 
   useEffect(() => {
-    const runtime = (window as any).runtime;
-    if (!runtime?.EventsOn) return;
-
-    const off = runtime.EventsOn("app:request-close", () => {
+    const off = EventsOn("app:request-close", () => {
       if (quitRequestedRef.current) return;
       setOpen(true);
     });
@@ -178,7 +170,6 @@ function CloseConfirmModal() {
   }, []);
 
   useEffect(() => {
-    if (!(window as any).runtime?.Environment) return;
     let cancelled = false;
 
     Environment()
@@ -212,7 +203,7 @@ function CloseConfirmModal() {
     setQuittingAction(action);
     try {
       // The backend acknowledges immediately and closes after cleanup completes.
-      await (action === "app-only" ? QuitAppOnlyApp() : ForceQuitApp());
+      await invokeDesktop(action === "app-only" ? "QuitAppOnly" : "ForceQuit");
     } catch (error) {
       console.error("Quit request failed", error);
       quitRequestedRef.current = false;
@@ -323,9 +314,9 @@ function CloseConfirmModal() {
 
 function App() {
   useEffect(() => {
-    installWailsOperationLogger();
+    installDesktopOperationLogger();
   }, []);
-  useWailsNotifications();
+  useDesktopNotifications();
   useGlobalErrorNotifications();
   const [quickLaunchOpen, setQuickLaunchOpen] = useState(false);
   const routeFallback = (

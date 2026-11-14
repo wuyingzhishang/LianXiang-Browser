@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Settings2 } from 'lucide-react'
 import { Badge, Button, Card, Progress, toast } from '../../../shared/components'
-import { EventsOn } from '../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../desktop'
 import { defaultAutomationState, fetchAutomationState, type AutomationState } from '../../settings/api'
 import {
   getAutomationNodeSource,

@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { BrowserOpenURL } from '../../../../wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '../../../../desktop'
 import { Button, FormItem, Input, Modal, Select, toast } from '../../../../shared/components'
 import { browserProxyCoreDownloadInfo, browserProxyCoreOpenLocal } from '../../api'
 import type { ProxyCoreDownloadInfoResult, ProxyCoreDownloadProgress, ProxyCoreStatusResult } from '../../types'

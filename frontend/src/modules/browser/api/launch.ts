@@ -1,4 +1,4 @@
-import { getBindings, getGoApp } from './runtime'
+import { getBindings, getDesktopApp } from './runtime'
 
 export interface LaunchServerInfo {
   host: string
@@ -56,7 +56,7 @@ export async function fetchLaunchServerInfo(): Promise<LaunchServerInfo> {
     return normalizeLaunchServerInfo(await bindings.GetLaunchServerInfo())
   }
 
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.GetLaunchServerInfo) {
     return normalizeLaunchServerInfo(await goApp.GetLaunchServerInfo())
   }

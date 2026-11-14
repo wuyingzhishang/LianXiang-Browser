@@ -3,7 +3,7 @@ import { Cloud, Database, Download, ExternalLink, RefreshCw } from 'lucide-react
 
 import { Button, Card, ConfirmModal, Table, toast } from '../../../shared/components'
 import type { TableColumn } from '../../../shared/components'
-import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '../../../desktop'
 import {
   fetchLocalBackupSettings,
   listLocalBackups,

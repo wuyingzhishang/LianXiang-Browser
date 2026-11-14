@@ -2,7 +2,7 @@
 import { toast } from '../../../../shared/components'
 import type { BrowserGroupWithCount, BrowserProfile, BrowserProxy, BrowserProxyVirtualGroup } from '../../types'
 import { fetchBrowserProfiles, fetchBrowserProxies, fetchBrowserProxyVirtualGroups, fetchGroups } from '../../api'
-import { EventsOn } from '../../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../../desktop'
 
 const PROFILE_LIST_FALLBACK_REFRESH_MS = 15_000
 const APP_READY_EVENT = 'app:ready'

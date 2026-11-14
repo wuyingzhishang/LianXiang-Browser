@@ -27,7 +27,7 @@ import clsx from "clsx";
 import { useLayoutStore } from "../../store/layoutStore";
 import { projectConfig, navigationConfig } from "../../config";
 import { useNotificationStore } from "../../store/notificationStore";
-import { GetAppConfig } from "../../wailsjs/go/main/App";
+import { getDesktopApp, invokeDesktop } from "../../desktop";
 
 // 导入应用logo
 import logoImage from "../../resources/images/logo.png";
@@ -65,10 +65,10 @@ export function Sidebar() {
   const unreadNotificationCount = notifications.filter((notification) => !notification.read).length;
 
   useEffect(() => {
-    const app = (window as any).go?.main?.App;
+    const app = getDesktopApp();
     if (!app?.GetAppConfig) return;
 
-    GetAppConfig()
+    invokeDesktop('GetAppConfig')
       .then((config) => {
         const version = typeof config?.version === "string" ? config.version.trim() : "";
         setAppVersion(version);

@@ -44,13 +44,7 @@ export const defaultS3Settings: S3Settings = {
   sessionTokenConfigured: false,
 }
 
-const getBindings = async () => {
-  try {
-    return await import('../../../../wailsjs/go/main/App')
-  } catch {
-    return null
-  }
-}
+import { getDesktopBindings as getBindings } from '../../../../desktop'
 
 function toPayload(value: Partial<S3Draft> | undefined, clearSessionToken: boolean): Record<string, string> {
   const payload: Record<string, string> = {

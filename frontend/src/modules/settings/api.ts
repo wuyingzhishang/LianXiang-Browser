@@ -5,13 +5,7 @@ import { defaultSettings } from './types'
 // 本地存储 key
 const SETTINGS_KEY = 'app_settings'
 
-const getBindings = async () => {
-  try {
-    return await import('../../wailsjs/go/main/App')
-  } catch {
-    return null
-  }
-}
+import { getDesktopBindings as getBindings } from '../../desktop'
 
 export interface AutomationSettings {
   enabled: boolean

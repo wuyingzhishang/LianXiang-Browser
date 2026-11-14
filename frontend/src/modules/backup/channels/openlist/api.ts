@@ -46,13 +46,7 @@ export const defaultOpenListSettings: OpenListSettings = {
   uploadRateLimitMBps: 0,
 }
 
-const getBindings = async () => {
-  try {
-    return await import('../../../../wailsjs/go/main/App')
-  } catch {
-    return null
-  }
-}
+import { getDesktopBindings as getBindings } from '../../../../desktop'
 
 function toPayload(value?: Partial<OpenListDraft>): Record<string, string> {
   const payload: Record<string, string> = {

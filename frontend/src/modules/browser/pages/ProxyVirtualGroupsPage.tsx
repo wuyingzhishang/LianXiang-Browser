@@ -12,7 +12,7 @@ import {
   probeBrowserProxyVirtualGroup,
   saveBrowserProxyVirtualGroup,
 } from '../api'
-import { EventsOn } from '../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../desktop'
 import { useProxyChecks } from './proxyPool/useProxyChecks'
 import { ProxyVirtualGroupMembersModal } from './proxyPool/ProxyVirtualGroupMembersModal'
 import { toDisplayList, type ProxyDisplayInfo } from './proxyPool/helpers'

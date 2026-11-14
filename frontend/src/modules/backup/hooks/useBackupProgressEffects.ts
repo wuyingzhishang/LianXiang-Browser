@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 
-import { EventsOff, EventsOn } from '../../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../../desktop'
 import { useBackupStore } from '../../../store/backupStore'
 
 import type { BackupExportLogItem, BackupExportProgress } from '../progress'
@@ -117,10 +117,7 @@ export function useBackupProgressEffects({
       })
     }
 
-    EventsOn('backup:export:progress', onExportProgress)
-    return () => {
-      EventsOff('backup:export:progress')
-    }
+    return EventsOn('backup:export:progress', onExportProgress)
   }, [setExportLogs, setExportProgress])
 
   useEffect(() => {
@@ -137,10 +134,7 @@ export function useBackupProgressEffects({
       setImportProgress(next)
     }
 
-    EventsOn('backup:import:progress', onImportProgress)
-    return () => {
-      EventsOff('backup:import:progress')
-    }
+    return EventsOn('backup:import:progress', onImportProgress)
   }, [setImportProgress])
 
   useEffect(() => {

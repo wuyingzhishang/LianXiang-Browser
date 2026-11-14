@@ -1,3 +1,4 @@
+import { getDesktopApp } from '../../desktop'
 ﻿import { type AutomationScriptRunInput, type AutomationScriptRunRecord } from "./automationScripts";
 import { startBrowserInstanceByCode } from "./api/instances";
 import { getBindings, normalizeAutomationScriptPublicApiInvokeResult, normalizeAutomationScriptRunInput, normalizeAutomationScriptRunRecord, type AutomationScriptPublicApiInvokeInput, type AutomationScriptPublicApiInvokeResult } from "./automationScriptApi.shared";
@@ -36,7 +37,7 @@ export async function runAutomationScript(
     );
   }
 
-  const goApp = (window as any).go?.main?.App;
+  const goApp = getDesktopApp();
   if (typeof goApp?.AutomationScriptRunWithOptions === "function") {
     return normalizeAutomationScriptRunRecord(
       await goApp.AutomationScriptRunWithOptions(bindingRequest),
@@ -91,7 +92,7 @@ export async function fetchAutomationScriptRuns(
       : [];
   }
 
-  const goApp = (window as any).go?.main?.App;
+  const goApp = getDesktopApp();
   if (typeof goApp?.AutomationScriptRunList === "function") {
     const raw = (await withAutomationRunListTimeout(goApp.AutomationScriptRunList(limit))) || [];
     return Array.isArray(raw)
@@ -132,7 +133,7 @@ export async function invokeAutomationScriptPublicApi(
     );
   }
 
-  const goApp = (window as any).go?.main?.App;
+  const goApp = getDesktopApp();
   if (typeof goApp?.AutomationScriptInvokePublicAPI === "function") {
     return normalizeAutomationScriptPublicApiInvokeResult(
       await goApp.AutomationScriptInvokePublicAPI({

@@ -1,16 +1,8 @@
 ﻿import type { BrowserCore, BrowserProfile, BrowserProxy, BrowserSettings } from '../types'
 
-export async function getBindings() {
-  try {
-    return await import('../../../wailsjs/go/main/App')
-  } catch {
-    return null
-  }
-}
+export { getDesktopBindings as getBindings } from '../../../desktop'
 
-export function getGoApp(): any {
-  return (globalThis as any).go?.main?.App ?? null
-}
+export { getDesktopApp } from '../../../desktop'
 
 export function nowISOString(): string {
   return new Date().toISOString()

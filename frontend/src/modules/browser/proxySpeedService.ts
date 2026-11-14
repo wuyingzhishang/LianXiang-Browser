@@ -1,4 +1,4 @@
-import { EventsOn } from '../../wailsjs/runtime/runtime'
+import { EventsOn } from '../../desktop'
 import { browserProxyBatchTestSpeed, browserProxyTestSpeed } from './api'
 import { useProxySpeedStore, type ProxySpeedResult } from './proxySpeedStore'
 import type { ProxySpeedTestResult } from './types'

@@ -74,13 +74,7 @@ export interface BackupLocalHistoryItem extends BackupPackageInfo {
 
 export type BackupDestinationSelection = BackupChannelSelection
 
-const getBindings = async () => {
-  try {
-    return await import('../../wailsjs/go/main/App')
-  } catch {
-    return null
-  }
-}
+import { getDesktopBindings as getBindings } from '../../desktop'
 
 export async function createBackupPackage(
   destinations: BackupDestinationSelection,

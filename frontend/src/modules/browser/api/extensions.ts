@@ -1,5 +1,5 @@
 import type { BrowserExtension, BrowserExtensionLookupResult, BrowserProfileExtensionSettings } from '../types'
-import { getBindings, getGoApp } from './runtime'
+import { getBindings, getDesktopApp } from './runtime'
 
 export interface BrowserExtensionManualInstallGuide {
   extensionId: string
@@ -105,7 +105,7 @@ export async function getBrowserExtensionManualInstallGuide(query: string): Prom
   if (bindings?.BrowserExtensionManualInstallGuide) {
     return normalizeManualInstallGuide(await bindings.BrowserExtensionManualInstallGuide(query))
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserExtensionManualInstallGuide) {
     return normalizeManualInstallGuide(await goApp.BrowserExtensionManualInstallGuide(query))
   }
@@ -118,7 +118,7 @@ export async function openBrowserExtensionManualDownloadDir(): Promise<void> {
     await bindings.BrowserExtensionOpenManualDownloadDir()
     return
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserExtensionOpenManualDownloadDir) {
     await goApp.BrowserExtensionOpenManualDownloadDir()
     return
@@ -132,7 +132,7 @@ export async function listBrowserExtensionManualDownloadFiles(): Promise<Browser
     const result = await bindings.BrowserExtensionListManualDownloadFiles()
     return Array.isArray(result) ? result.map(normalizeManualDownloadFile) : []
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserExtensionListManualDownloadFiles) {
     const result = await goApp.BrowserExtensionListManualDownloadFiles()
     return Array.isArray(result) ? result.map(normalizeManualDownloadFile) : []
@@ -145,7 +145,7 @@ export async function installBrowserExtensionManualDownloadFile(fileName: string
   if (bindings?.BrowserExtensionInstallManualDownloadFile) {
     return normalizeExtension(await bindings.BrowserExtensionInstallManualDownloadFile(fileName))
   }
-  const goApp = getGoApp()
+  const goApp = getDesktopApp()
   if (goApp?.BrowserExtensionInstallManualDownloadFile) {
     return normalizeExtension(await goApp.BrowserExtensionInstallManualDownloadFile(fileName))
   }
