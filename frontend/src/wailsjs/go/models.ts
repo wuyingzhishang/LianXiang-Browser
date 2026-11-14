@@ -738,6 +738,13 @@ export namespace backend {
 	    httpOnly: boolean;
 	    secure: boolean;
 	    sameSite: string;
+	    priority?: string;
+	    sameParty?: boolean;
+	    sourceScheme?: string;
+	    sourcePort?: number;
+	    hostOnly?: boolean;
+	    session?: boolean;
+	    partitionKey?: number[];
 	
 	    static createFrom(source: any = {}) {
 	        return new CookieInfo(source);
@@ -763,29 +770,17 @@ export namespace backend {
 	        this.partitionKey = source["partitionKey"];
 	    }
 	}
-	export class ProfilePackageExportOptions {
-	    portableSessionPassword?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ProfilePackageExportOptions(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.portableSessionPassword = source["portableSessionPassword"];
-	    }
-	}
 	export class DataDirectoryInfo {
 	    currentDataDir: string;
 	    defaultDataDir: string;
 	    customDataDir: string;
 	    useCustomDataDir: boolean;
 	    isCustomDirValid: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DataDirectoryInfo(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.currentDataDir = source["currentDataDir"];
@@ -801,11 +796,11 @@ export namespace backend {
 	    migrateData: boolean;
 	    migrateChrome: boolean;
 	    migrateConfig: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DataDirectoryMigrateOptions(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.sourceDir = source["sourceDir"];
@@ -819,11 +814,11 @@ export namespace backend {
 	    success: boolean;
 	    message: string;
 	    error?: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DataDirectoryMigrateResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -834,15 +829,27 @@ export namespace backend {
 	export class DataDirectorySelectResult {
 	    selected: boolean;
 	    directory: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DataDirectorySelectResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.selected = source["selected"];
 	        this.directory = source["directory"];
+	    }
+	}
+	export class ProfilePackageExportOptions {
+	    portableSessionPassword?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfilePackageExportOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.portableSessionPassword = source["portableSessionPassword"];
 	    }
 	}
 	export class ProfilePackageExportResult {
@@ -923,6 +930,7 @@ export namespace backend {
 	    actions?: ProfilePackageImportAction[];
 	    conflictMode: string;
 	    confirmConflict: boolean;
+	    portableSessionPassword?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProfilePackageImportOptions(source);
@@ -1329,12 +1337,78 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class ProxyRefreshPair {
+	    oldName: string;
+	    newName: string;
+	    match: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyRefreshPair(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.oldName = source["oldName"];
+	        this.newName = source["newName"];
+	        this.match = source["match"];
+	    }
+	}
+	export class ProxySourceRefreshResult {
+	    sourceId: string;
+	    sourceUrl: string;
+	    fetched: number;
+	    nameMatched: number;
+	    countryMatched: number;
+	    endpointMatched: number;
+	    added: number;
+	    pairs?: ProxyRefreshPair[];
+	    markedMissing: number;
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxySourceRefreshResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceId = source["sourceId"];
+	        this.sourceUrl = source["sourceUrl"];
+	        this.fetched = source["fetched"];
+	        this.nameMatched = source["nameMatched"];
+	        this.countryMatched = source["countryMatched"];
+	        this.endpointMatched = source["endpointMatched"];
+	        this.added = source["added"];
+	        this.pairs = this.convertValues(source["pairs"], ProxyRefreshPair);
+	        this.markedMissing = source["markedMissing"];
+	        this.total = source["total"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ProxyTestResult {
 	    proxyId: string;
 	    ok: boolean;
 	    latencyMs: number;
 	    engine: string;
 	    error: string;
+	    fingerprint: string;
+	    testedAt: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProxyTestResult(source);
@@ -1365,13 +1439,16 @@ export namespace backend {
 	        this.errorMsg = source["errorMsg"];
 	    }
 	}
-	export class SnapshotInfo {
-	    snapshotId: string;
-	    profileId: string;
-	    name: string;
-	    sizeMB: number;
-	    createdAt: string;
-	    filePath?: string;
+	export class ProxyVirtualGroupMemberHealth {
+	    proxyId: string;
+	    proxyName: string;
+	    groupName: string;
+	    state: string;
+	    latencyMs: number;
+	    lastProbeAt: string;
+	    lastError: string;
+	    active: boolean;
+	    preferred: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProxyVirtualGroupMemberHealth(source);
@@ -1388,6 +1465,99 @@ export namespace backend {
 	        this.lastError = source["lastError"];
 	        this.active = source["active"];
 	        this.preferred = source["preferred"];
+	    }
+	}
+	export class ProxyVirtualGroupHealth {
+	    groupId: string;
+	    groupName: string;
+	    strategy: string;
+	    activeProxyId: string;
+	    preferredProxyId: string;
+	    total: number;
+	    healthy: number;
+	    suspect: number;
+	    degraded: number;
+	    allDegraded: boolean;
+	    members: ProxyVirtualGroupMemberHealth[];
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyVirtualGroupHealth(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groupId = source["groupId"];
+	        this.groupName = source["groupName"];
+	        this.strategy = source["strategy"];
+	        this.activeProxyId = source["activeProxyId"];
+	        this.preferredProxyId = source["preferredProxyId"];
+	        this.total = source["total"];
+	        this.healthy = source["healthy"];
+	        this.suspect = source["suspect"];
+	        this.degraded = source["degraded"];
+	        this.allDegraded = source["allDegraded"];
+	        this.members = this.convertValues(source["members"], ProxyVirtualGroupMemberHealth);
+	        this.updatedAt = source["updatedAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class ProxyVirtualGroupProbeResult {
+	    groupId: string;
+	    tested: number;
+	    healthy: number;
+	    degraded: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyVirtualGroupProbeResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groupId = source["groupId"];
+	        this.tested = source["tested"];
+	        this.healthy = source["healthy"];
+	        this.degraded = source["degraded"];
+	    }
+	}
+	export class SnapshotInfo {
+	    snapshotId: string;
+	    profileId: string;
+	    name: string;
+	    sizeMB: number;
+	    createdAt: string;
+	    filePath?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SnapshotInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.snapshotId = source["snapshotId"];
+	        this.profileId = source["profileId"];
+	        this.name = source["name"];
+	        this.sizeMB = source["sizeMB"];
+	        this.createdAt = source["createdAt"];
+	        this.filePath = source["filePath"];
 	    }
 	}
 
@@ -1408,23 +1578,21 @@ export namespace backup {
 	    description?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new ProxyVirtualGroupHealth(source);
+	        return new ManifestEntry(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.groupId = source["groupId"];
-	        this.groupName = source["groupName"];
-	        this.strategy = source["strategy"];
-	        this.activeProxyId = source["activeProxyId"];
-	        this.preferredProxyId = source["preferredProxyId"];
-	        this.total = source["total"];
-	        this.healthy = source["healthy"];
-	        this.suspect = source["suspect"];
-	        this.degraded = source["degraded"];
-	        this.allDegraded = source["allDegraded"];
-	        this.members = this.convertValues(source["members"], ProxyVirtualGroupMemberHealth);
-	        this.updatedAt = source["updatedAt"];
+	        this.id = source["id"];
+	        this.category = source["category"];
+	        this.entryType = source["entryType"];
+	        this.required = source["required"];
+	        this.coreId = source["coreId"];
+	        this.archivePath = source["archivePath"];
+	        this.fileCount = source["fileCount"];
+	        this.byteSize = source["byteSize"];
+	        this.sha256 = source["sha256"];
+	        this.description = source["description"];
 	    }
 	}
 	export class ManifestAppInfo {
@@ -2083,6 +2251,13 @@ export namespace config {
 	    speedTargetId: string;
 	    ipHealthTargetId: string;
 	    targets: ProxyCheckTarget[];
+	    virtualGroupHealthEnabled?: boolean;
+	    virtualGroupProbeIntervalMinutes: number;
+	    degradeFailureThreshold: number;
+	    restoreSuccessThreshold: number;
+	    runtimeFailoverEnabled?: boolean;
+	    runtimeFailoverCooldownMinutes: number;
+	    runtimeFailoverMaxAttempts: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProxyCheckConfig(source);
@@ -2104,6 +2279,61 @@ export namespace config {
 	        this.runtimeFailoverEnabled = source["runtimeFailoverEnabled"];
 	        this.runtimeFailoverCooldownMinutes = source["runtimeFailoverCooldownMinutes"];
 	        this.runtimeFailoverMaxAttempts = source["runtimeFailoverMaxAttempts"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class SourceAlignPair {
+	    oldName: string;
+	    newName: string;
+	    match: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SourceAlignPair(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.oldName = source["oldName"];
+	        this.newName = source["newName"];
+	        this.match = source["match"];
+	    }
+	}
+	export class SourceAlignRecord {
+	    at: string;
+	    mode: string;
+	    pairs?: SourceAlignPair[];
+	    added: number;
+	    keptMissing: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SourceAlignRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.at = source["at"];
+	        this.mode = source["mode"];
+	        this.pairs = this.convertValues(source["pairs"], SourceAlignPair);
+	        this.added = source["added"];
+	        this.keptMissing = source["keptMissing"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
