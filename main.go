@@ -451,9 +451,9 @@ func main() {
 		},
 		// 拦截关闭按钮事件，由前端处理自定义对话框
 		OnBeforeClose: func(ctx context.Context) bool {
-			lifecycle.Log(appRoot, "wails.on_before_close.begin", nil)
 			blocked := app.shouldBlockClose(ctx)
-			lifecycle.Log(appRoot, "wails.on_before_close.result", map[string]interface{}{"blocked": blocked})
+			// This callback runs on the window thread. Disk flushes must not delay the dialog.
+			go lifecycle.Log(appRoot, "wails.on_before_close.result", map[string]interface{}{"blocked": blocked})
 			return blocked
 		},
 		Bind: []interface{}{
@@ -467,7 +467,7 @@ func main() {
 		Windows: &windows.Options{
 			WebviewIsTransparent:                false,
 			WindowIsTranslucent:                 false,
-			WebviewGpuIsDisabled:                true,
+			WebviewGpuIsDisabled:                envFlagEnabled("LIANXIANG_WEBVIEW_DISABLE_GPU"),
 			WebviewDisableRendererCodeIntegrity: true,
 		},
 		LogLevelProduction: wailslogger.ERROR,

@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"context"
 	"lianxiang-browser/backend/internal/automation"
 	"lianxiang-browser/backend/internal/browser"
 	"lianxiang-browser/backend/internal/config"
@@ -8,7 +9,6 @@ import (
 	"lianxiang-browser/backend/internal/launchcode"
 	"lianxiang-browser/backend/internal/logger"
 	"lianxiang-browser/backend/internal/proxy"
-	"context"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +44,7 @@ type App struct {
 	forceQuit                   bool
 	quitMode                    quitMode
 	quitMu                      sync.RWMutex
+	quitRequestOnce             sync.Once
 	runtimeMu                   sync.RWMutex
 	runtimeStopped              bool
 	backgroundTaskCtx           context.Context

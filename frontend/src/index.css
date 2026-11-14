@@ -164,206 +164,52 @@ input, select, textarea {
   animation: slideInRight 0.3s ease-out;
 }
 
+/* Keep modal animation on opacity/transform; full-window blur forces repainting. */
 @keyframes modalBackdropIn {
-  from {
-    opacity: 0;
-    background-position: 44% 56%;
-    -webkit-backdrop-filter: blur(0) saturate(1);
-    backdrop-filter: blur(0) saturate(1);
-  }
-  18% {
-    opacity: 0.08;
-    background-position: 45.5% 54.5%;
-    -webkit-backdrop-filter: blur(0.2px) saturate(0.999);
-    backdrop-filter: blur(0.2px) saturate(0.999);
-  }
-  42% {
-    opacity: 0.28;
-    background-position: 47.5% 52.5%;
-    -webkit-backdrop-filter: blur(0.8px) saturate(0.992);
-    backdrop-filter: blur(0.8px) saturate(0.992);
-  }
-  68% {
-    opacity: 0.64;
-    background-position: 49.2% 50.8%;
-    -webkit-backdrop-filter: blur(1.8px) saturate(0.982);
-    backdrop-filter: blur(1.8px) saturate(0.982);
-  }
-  88% {
-    opacity: 0.9;
-    background-position: 50% 50%;
-    -webkit-backdrop-filter: blur(2.3px) saturate(0.977);
-    backdrop-filter: blur(2.3px) saturate(0.977);
-  }
-  to {
-    opacity: 1;
-    background-position: 50% 50%;
-    -webkit-backdrop-filter: blur(2.5px) saturate(0.975);
-    backdrop-filter: blur(2.5px) saturate(0.975);
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes modalBackdropOut {
-  from {
-    opacity: 1;
-    background-position: 50% 50%;
-    -webkit-backdrop-filter: blur(2.5px) saturate(0.975);
-    backdrop-filter: blur(2.5px) saturate(0.975);
-  }
-  18% {
-    opacity: 0.94;
-    background-position: 50.3% 49.7%;
-    -webkit-backdrop-filter: blur(2.2px) saturate(0.979);
-    backdrop-filter: blur(2.2px) saturate(0.979);
-  }
-  42% {
-    opacity: 0.72;
-    background-position: 51.1% 48.9%;
-    -webkit-backdrop-filter: blur(1.4px) saturate(0.988);
-    backdrop-filter: blur(1.4px) saturate(0.988);
-  }
-  68% {
-    opacity: 0.42;
-    background-position: 52% 48%;
-    -webkit-backdrop-filter: blur(0.7px) saturate(0.996);
-    backdrop-filter: blur(0.7px) saturate(0.996);
-  }
-  88% {
-    opacity: 0.14;
-    background-position: 52.7% 47.3%;
-    -webkit-backdrop-filter: blur(0.2px) saturate(1);
-    backdrop-filter: blur(0.2px) saturate(1);
-  }
-  to {
-    opacity: 0;
-    background-position: 53% 47%;
-    -webkit-backdrop-filter: blur(0) saturate(1);
-    backdrop-filter: blur(0) saturate(1);
-  }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @keyframes modalIn {
-  from {
-    opacity: 0;
-    filter: blur(1px);
-    transform: translate3d(0, 10px, 0) scale(0.98);
-  }
-  45% {
-    opacity: 0.96;
-    filter: blur(0.2px);
-    transform: translate3d(0, 2px, 0) scale(0.995);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translate3d(0, 0, 0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes modalOut {
-  from {
-    opacity: 1;
-    filter: blur(0);
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  45% {
-    opacity: 0.96;
-    filter: blur(0.05px);
-    transform: translate3d(0, 1px, 0) scale(0.998);
-  }
-  to {
-    opacity: 0;
-    filter: blur(0.6px);
-    transform: translate3d(0, 4px, 0) scale(0.99);
-  }
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(4px); }
 }
 
 .modal-backdrop {
-  background:
-    linear-gradient(135deg, rgb(15 23 42 / 0.16), rgb(0 0 0 / 0.46) 54%, rgb(15 23 42 / 0.52));
-  background-size: 180% 180%;
-  background-position: 50% 50%;
-  -webkit-backdrop-filter: blur(2.5px) saturate(0.975);
-  backdrop-filter: blur(2.5px) saturate(0.975);
-  will-change: opacity, backdrop-filter, background-position;
-}
-
-.animate-modal-backdrop-in {
-  animation: modalBackdropIn 0.68s ease-in-out both;
-}
-
-.animate-modal-backdrop-out {
-  animation: modalBackdropOut 0.68s ease-in-out both;
-}
-
-.animate-modal-in {
-  animation: modalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.animate-modal-out {
-  animation: modalOut 0.38s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-@keyframes modalSurfaceSheenIn {
-  from {
-    opacity: 0;
-    transform: translate3d(-36%, 0, 0) scale(1.04);
-  }
-  45% {
-    opacity: 0.08;
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(36%, 0, 0) scale(1.04);
-  }
-}
-
-@keyframes modalSurfaceSheenOut {
-  from {
-    opacity: 0.03;
-    transform: translate3d(6%, 0, 0) scale(1.02);
-  }
-  48% {
-    opacity: 0.06;
-    transform: translate3d(24%, 0, 0) scale(1.02);
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(42%, 0, 0) scale(1.02);
-  }
+  background: rgb(15 23 42 / 0.42);
 }
 
 .modal-surface {
-  background:
-    linear-gradient(135deg, rgb(255 255 255 / 0.05), transparent 42%),
-    var(--color-bg-elevated);
-  isolation: isolate;
+  background: var(--color-bg-elevated);
   overflow: hidden;
-  will-change: opacity, transform, filter;
 }
 
-.modal-surface::after {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  background: linear-gradient(112deg, transparent 18%, rgb(255 255 255 / 0.08) 49%, transparent 82%);
-  content: '';
-  pointer-events: none;
-  transform: translate3d(-36%, 0, 0) scale(1.04);
+.animate-modal-backdrop-in,
+.animate-modal-in {
+  animation: modalBackdropIn 160ms ease-out both;
 }
 
-.modal-surface > * {
-  position: relative;
-  z-index: 1;
+.animate-modal-in {
+  animation-name: modalIn;
 }
 
-.animate-modal-in::after {
-  animation: modalSurfaceSheenIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+.animate-modal-backdrop-out,
+.animate-modal-out {
+  animation: modalBackdropOut var(--modal-exit-duration, 140ms) ease-in both;
 }
 
-.animate-modal-out::after {
-  animation: modalSurfaceSheenOut 0.38s cubic-bezier(0.4, 0, 0.2, 1) both;
+.animate-modal-out {
+  animation-name: modalOut;
 }
 
 /* 弹窗动效 */

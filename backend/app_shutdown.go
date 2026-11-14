@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"lianxiang-browser/backend/internal/logger"
 	"context"
+	"lianxiang-browser/backend/internal/logger"
 	"os/exec"
 	goruntime "runtime"
 	"strings"
@@ -27,19 +27,27 @@ func (a *App) GetInterceptor() *logger.MethodInterceptor {
 	return a.interceptor
 }
 
-// ForceQuit 设置强制退出标志并调用 runtime.Quit
+// ForceQuit 接受退出请求；清理在后台执行，避免阻塞绑定调用和托盘菜单。
 func (a *App) ForceQuit() {
-	a.setQuitMode(quitModeFull)
-	a.stopRuntimeEvents()
-	a.stopRuntimeServices()
-	a.runtimeQuit()
+	a.requestQuit(quitModeFull, a.runtimeQuit)
 }
 
 // QuitAppOnly 仅退出应用本身，保留当前已打开的浏览器实例。
 func (a *App) QuitAppOnly() {
-	a.setQuitMode(quitModeAppOnly)
-	a.stopRuntimeEvents()
-	a.runtimeQuit()
+	a.requestQuit(quitModeAppOnly, a.runtimeQuit)
+}
+
+func (a *App) requestQuit(mode quitMode, quit func()) {
+	a.quitRequestOnce.Do(func() {
+		a.setQuitMode(mode)
+		go func() {
+			a.stopRuntimeEvents()
+			if mode == quitModeFull {
+				a.stopRuntimeServices()
+			}
+			quit()
+		}()
+	})
 }
 
 func Start(a *App, ctx context.Context) {
@@ -89,9 +97,9 @@ func ShouldBlockClose(a *App, ctx context.Context) bool {
 }
 
 func (a *App) stopRuntimeServices() {
-	a.stopRuntimeEvents()
-	a.waitBackgroundTasks()
 	a.stopServicesOnce.Do(func() {
+		a.stopRuntimeEvents()
+		a.waitBackgroundTasks()
 		if a.automationMgr != nil {
 			a.automationMgr.StopAllTasks()
 		}

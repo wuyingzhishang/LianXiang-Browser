@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import { ThemeProvider } from "./shared/theme";
 import { Layout } from "./shared/layout";
-import { MODAL_EXIT_DURATION_MS, ToastContainer, Modal, Button, Loading, toast } from "./shared/components";
+import { ToastContainer, Modal, Button, Loading, toast } from "./shared/components";
 import { AlertCircle } from "lucide-react";
 import { AppRoutes } from "./routes/AppRoutes";
 import { lazyNamed } from "./routes/lazyNamed";
@@ -15,7 +15,6 @@ import {
 } from "./wailsjs/go/main/App";
 import {
   Environment,
-  Quit,
   WindowHide,
   WindowMinimise,
 } from "./wailsjs/runtime/runtime";
@@ -158,25 +157,19 @@ function CloseConfirmModal() {
   const [quittingAction, setQuittingAction] = useState<
     "app-only" | "app-and-browser" | null
   >(null);
-  const closeActionTimerRef = useRef<number | null>(null);
+  const quitRequestedRef = useRef(false);
   const importInProgress = useBackupStore((s) => s.importInProgress);
   const importProgress = useBackupStore((s) => s.importProgress);
   const importMessage = useBackupStore((s) => s.importMessage);
   const supportsTray = platform === "windows";
   const quitting = quittingAction !== null;
 
-  useEffect(() => () => {
-    if (closeActionTimerRef.current !== null) {
-      window.clearTimeout(closeActionTimerRef.current);
-    }
-  }, []);
-
   useEffect(() => {
     const runtime = (window as any).runtime;
     if (!runtime?.EventsOn) return;
 
     const off = runtime.EventsOn("app:request-close", () => {
-      setQuittingAction(null);
+      if (quitRequestedRef.current) return;
       setOpen(true);
     });
     return () => {
@@ -185,6 +178,7 @@ function CloseConfirmModal() {
   }, []);
 
   useEffect(() => {
+    if (!(window as any).runtime?.Environment) return;
     let cancelled = false;
 
     Environment()
@@ -205,59 +199,36 @@ function CloseConfirmModal() {
     setOpen(false);
   };
 
-  const closeAfterAnimation = (action: () => void | Promise<void>) => {
-    if (closeActionTimerRef.current !== null) return;
-
-    setOpen(false);
-    closeActionTimerRef.current = window.setTimeout(() => {
-      closeActionTimerRef.current = null;
-      void action();
-    }, MODAL_EXIT_DURATION_MS);
-  };
-
   const handleMinimize = () => {
-    if (quitting) return;
-    closeAfterAnimation(() => {
-      if (supportsTray) {
-        WindowHide();
-        return;
-      }
-      WindowMinimise();
-    });
+    if (quitRequestedRef.current) return;
+    setOpen(false);
+    if (supportsTray) WindowHide();
+    else WindowMinimise();
   };
 
-  const handleQuitAppOnly = () => {
-    setQuittingAction("app-only");
-    closeAfterAnimation(async () => {
-      try {
-        await QuitAppOnlyApp();
-      } catch (error) {
-        console.error("QuitAppOnly failed", error);
-        setQuittingAction(null);
-      }
-    });
+  const requestQuit = async (action: "app-only" | "app-and-browser") => {
+    if (quitRequestedRef.current) return;
+    quitRequestedRef.current = true;
+    setQuittingAction(action);
+    try {
+      // The backend acknowledges immediately and closes after cleanup completes.
+      await (action === "app-only" ? QuitAppOnlyApp() : ForceQuitApp());
+    } catch (error) {
+      console.error("Quit request failed", error);
+      quitRequestedRef.current = false;
+      setQuittingAction(null);
+      toast.error("退出请求失败，请重试");
+    }
   };
 
-  const handleQuitAppAndBrowsers = () => {
-    setQuittingAction("app-and-browser");
-    closeAfterAnimation(async () => {
-      try {
-        await Promise.race([
-          ForceQuitApp(),
-          new Promise((resolve) => setTimeout(resolve, 1200)),
-        ]);
-      } catch (error) {
-        console.error("ForceQuit failed, falling back to runtime.Quit()", error);
-      }
-      Quit();
-    });
-  };
+  const handleQuitAppOnly = () => { void requestQuit("app-only"); };
+  const handleQuitAppAndBrowsers = () => { void requestQuit("app-and-browser"); };
 
   return (
     <Modal
       open={open}
       onClose={closeModal}
-      title={importInProgress ? "关闭应用确认" : undefined}
+      title="关闭应用确认"
       width={importInProgress ? "360px" : "420px"}
       closable={!quitting}
     >
@@ -271,12 +242,16 @@ function CloseConfirmModal() {
         >
           <AlertCircle className="w-6 h-6" />
         </div>
-        {importInProgress && (
+        {importInProgress && !quitting && (
           <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
             正在导入备份，是否关闭？
           </h3>
         )}
-        {importInProgress ? (
+        {quitting ? (
+          <p role="status" className="mb-6 text-sm text-center text-[var(--color-text-secondary)]">
+            {quittingAction === "app-only" ? "正在退出应用，保留浏览器实例…" : "正在关闭浏览器与后台服务…"}
+          </p>
+        ) : importInProgress ? (
           <p className="text-sm text-[var(--color-text-secondary)] text-center mb-6">
             当前正在导入备份
             {importProgress > 0 ? `（${importProgress}%）` : ""}。

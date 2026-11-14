@@ -1,11 +1,74 @@
 package backend
 
 import (
+	"context"
 	"lianxiang-browser/backend/internal/browser"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestFullQuitAcknowledgesBeforeCleanupAndRunsOnce(t *testing.T) {
+	app := NewApp(t.TempDir())
+	app.setRuntimeContext(context.Background())
+	releaseTask := make(chan struct{})
+	defer close(releaseTask)
+	if err := app.startBackgroundTask(func(ctx context.Context) { <-releaseTask }); err != nil {
+		t.Fatal(err)
+	}
+	quit := make(chan struct{}, 2)
+	ack := make(chan struct{})
+	go func() {
+		app.requestQuit(quitModeFull, func() { quit <- struct{}{} })
+		app.requestQuit(quitModeAppOnly, func() { quit <- struct{}{} })
+		close(ack)
+	}()
+	select {
+	case <-ack:
+	case <-time.After(time.Second):
+		t.Fatal("quit request blocked on background cleanup")
+	}
+	if !app.shouldStopRuntimeServicesOnShutdown() {
+		t.Fatal("repeated quit changed the selected mode")
+	}
+	select {
+	case <-quit:
+		t.Fatal("quit happened before cleanup completed")
+	default:
+	}
+	releaseTask <- struct{}{}
+	select {
+	case <-quit:
+	case <-time.After(time.Second):
+		t.Fatal("quit did not finish after cleanup")
+	}
+	select {
+	case <-quit:
+		t.Fatal("duplicate quit callback")
+	default:
+	}
+}
+
+func TestAppOnlyQuitDoesNotStopBrowserRuntime(t *testing.T) {
+	app := NewApp(t.TempDir())
+	app.setRuntimeContext(context.Background())
+	// If app-only quit enters full cleanup, it would wait for this task.
+	releaseTask := make(chan struct{})
+	defer close(releaseTask)
+	if err := app.startBackgroundTask(func(ctx context.Context) { <-releaseTask }); err != nil {
+		t.Fatal(err)
+	}
+	quit := make(chan struct{})
+	app.requestQuit(quitModeAppOnly, func() { close(quit) })
+	select {
+	case <-quit:
+	case <-time.After(time.Second):
+		t.Fatal("app-only quit entered full runtime cleanup")
+	}
+	if app.shouldStopRuntimeServicesOnShutdown() {
+		t.Fatal("app-only mode was not retained")
+	}
+}
 
 func TestQuitStateTransitions(t *testing.T) {
 	app := NewApp(t.TempDir())

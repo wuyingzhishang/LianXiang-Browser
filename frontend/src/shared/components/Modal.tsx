@@ -1,10 +1,9 @@
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { CSSProperties, ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { Button } from './Button'
 
-export const MODAL_EXIT_DURATION_MS = 420
-const MODAL_BACKDROP_EXIT_DURATION_MS = 680
+export const MODAL_EXIT_DURATION_MS = 140
 
 interface ModalProps {
   open: boolean
@@ -26,20 +25,18 @@ export function Modal({
   closable = true,
 }: ModalProps) {
   const [mounted, setMounted] = useState(open)
-  const [closing, setClosing] = useState(false)
+  const titleId = useId()
+  const closing = !open
 
   useEffect(() => {
     if (open) {
       setMounted(true)
-      setClosing(false)
       return
     }
 
-    setClosing(true)
     const timer = window.setTimeout(() => {
       setMounted(false)
-      setClosing(false)
-    }, MODAL_BACKDROP_EXIT_DURATION_MS)
+    }, MODAL_EXIT_DURATION_MS)
 
     return () => window.clearTimeout(timer)
   }, [open])
@@ -51,15 +48,21 @@ export function Modal({
     }
   }, [mounted])
 
-  if (!mounted) return null
+  if (!open && !mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[9990] flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-[9990] flex items-center justify-center"
+      style={{ '--modal-exit-duration': `${MODAL_EXIT_DURATION_MS}ms`, pointerEvents: closing ? 'none' : undefined } as CSSProperties}
+    >
       <div
         className={`modal-backdrop absolute inset-0 ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
       />
 
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className={`modal-surface relative flex max-h-[90vh] w-full flex-col rounded-xl bg-[var(--color-bg-elevated)] shadow-2xl ${closing ? 'animate-modal-out' : 'animate-modal-in'}`}
         style={{ width, maxWidth: '90vw' }}
         onClick={(e) => e.stopPropagation()}
@@ -67,12 +70,14 @@ export function Modal({
         {(title || closable) && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)] flex-shrink-0">
             {title && (
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+              <h3 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {title}
               </h3>
             )}
             {closable && (
               <button
+                type="button"
+                aria-label="关闭弹窗"
                 onClick={onClose}
                 className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-muted)] transition-colors ml-auto"
               >
